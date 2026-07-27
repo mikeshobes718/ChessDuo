@@ -1,0 +1,37 @@
+name: ChessCoach
+options:
+  bundleIdPrefix: com.mikeshobes
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    TARGETED_DEVICE_FAMILY: "1"
+targets:
+  ChessCoach:
+    type: application
+    platform: iOS
+    sources:
+      - path: ChessCoach
+    info:
+      path: ChessCoach/Info.plist
+      properties:
+        API_GAME_URL: "https://kcdlmmfzeksjqwdppjzy.supabase.co/functions/v1/game"
+        CFBundleDisplayName: "Chess Duo"
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikeshobes.chesscoachduo
+        PRODUCT_NAME: ChessCoach
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+        # Helps Xcode-beta when swift-plugin-server returns malformed State macro responses.
+        OTHER_SWIFT_FLAGS: >-
+          $(inherited)
+          -plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins
+          -external-plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins#$(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server
+    scheme:
+      testTargets: []

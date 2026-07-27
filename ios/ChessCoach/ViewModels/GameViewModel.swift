@@ -1,0 +1,786 @@
+import Combine
+import Foundation
+import UIKit
+
+@MainActor
+final class GameViewModel: ObservableObject {
+    @Published var playerName = ""
+    @Published var roomCodeInput = ""
+    @Published private(set) var session: PlayerSession?
+    @Published private(set) var game = GameState()
+    @Published private(set) var isLoading = false
+    @Published private(set) var isSubmittingMove = false
+    @Published private(set) var isReconnecting = false
+    @Published var errorMessage: String?
+    @Published var toastMessage: String?
+    @Published var selectedSquare: String?
+    @Published private(set) var coachMessage =
+        "Look for checks, captures, and threats before every move."
+    @Published var boardFlipped = false
+    @Published var showLegend = false
+    @Published var showCoachHistory = false
+    @Published var quizFeedback: String?
+    @Published private(set) var hintsEnabled: Bool = UserDefaults.standard.object(forKey: "hintsEnabled") as? Bool ?? false
+    @Published private(set) var moveGuideEnabled: Bool = UserDefaults.standard.object(forKey: "moveGuideEnabled") as? Bool ?? false
+    @Published private(set) var playForMeEnabled: Bool = UserDefaults.standard.object(forKey: "playForMeEnabled") as? Bool ?? false
+    @Published private(set) var computerDifficulty: ComputerDifficulty = .stored
+    @Published private(set) var privateSuggestedHint: SuggestedHint?
+    @Published private(set) var privateHintMessage: String?
+    @Published var showMatchReview = false
+
+    private let api: GameAPIClient
+    private let store: SessionStore
+    private var pollingTask: Task<Void, Never>?
+    private var lastKnownVersion = -1
+    private var lastKnownTurn: PlayerColor?
+    private var toastTask: Task<Void, Never>?
+    private var quizDismissTask: Task<Void, Never>?
+    private var answeredQuizForVersion: Int?
+
+    init(api: GameAPIClient = GameAPIClient(), store: SessionStore = SessionStore()) {
+        self.api = api
+        self.store = store
+        session = store.load()
+        if let session {
+            playerName = session.playerName
+            game.roomCode = session.roomCode
+            startPolling()
+        }
+        Feedback.requestNotificationPermission()
+    }
+
+    var legalDestinations: Set<String> {
+        guard let selectedSquare else { return [] }
+        return Set(game.legalMoves.filter { $0.from == selectedSquare }.map(\.to))
+    }
+
+    var boardOrientation: PlayerColor {
+        if boardFlipped {
+            return session?.color == .black ? .white : .black
+        }
+        return session?.color == .black ? .black : .white
+    }
+
+    var canMove: Bool {
+        guard let session, session.color != .spectator else { return false }
+        return game.turn == session.color && !game.isFinished && !isSubmittingMove
+    }
+
+    var turnBanner: String {
+        if game.status.lowercased() == "waiting" {
+            return L10n.t(.waitingPartner)
+        }
+        if game.isFinished {
+            return game.result ?? L10n.t(.gameOver)
+        }
+        if game.isCheck {
+            if game.turn == session?.color {
+                return L10n.t(.inCheckYou)
+            }
+            return L10n.t(.inCheckThem, displayName(for: game.turn))
+        }
+        if let session, game.turn == session.color {
+            return L10n.t(.yourTurn)
+        }
+        return L10n.t(.waitingForName, displayName(for: game.turn))
+    }
+
+    var selectedSquareLabel: String? {
+        guard let selectedSquare else { return nil }
+        return selectedSquare.uppercased()
+    }
+
+    var lastMoveLabel: String? {
+        guard let last = game.lastMove, let from = last.from, let to = last.to else { return nil }
+        let who = (last.by == "white" ? game.whiteName : game.blackName)
+        let sanSuffix = last.san.map { " (\($0))" } ?? ""
+        return L10n.t(.playedMove, who, from.uppercased(), to.uppercased(), sanSuffix)
+    }
+
+    var drama: GameDrama {
+        PositionDrama.evaluate(
+            fen: game.fen,
+            status: game.status,
+            isCheck: game.isCheck,
+            legalMoveCount: game.legalMoves.count,
+            you: session?.color == .spectator ? nil : session?.color,
+            whiteName: game.whiteName,
+            blackName: game.blackName
+        )
+    }
+
+    func createGame() async {
+        let name = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else {
+            presentToast(L10n.t(.enterNameCreate))
+            return
+        }
+        await performLobbyRequest {
+            try await self.api.create(name: name)
+        }
+    }
+
+    func joinGame() async {
+        let name = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let code = roomCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !name.isEmpty, !code.isEmpty else {
+            presentToast(L10n.t(.enterNameJoin))
+            return
+        }
+        await performLobbyRequest {
+            try await self.api.join(name: name, roomCode: code)
+        }
+    }
+
+    func spectateGame() async {
+        let code = roomCodeInput.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !code.isEmpty else {
+            presentToast(L10n.t(.enterCodeWatch))
+            return
+        }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let response = try await api.spectate(roomCode: code)
+            let newSession = PlayerSession(
+                roomCode: code,
+                playerToken: "spectator",
+                color: .spectator,
+                playerName: playerName.isEmpty ? "Spectator" : playerName
+            )
+            session = newSession
+            store.save(newSession)
+            merge(response)
+            startPolling()
+        } catch {
+            show(error)
+        }
+    }
+
+    func select(square: String) {
+        guard canMove else {
+            if session?.color != .spectator {
+                presentToast(game.turn == session?.color ? L10n.t(.pickYourPiece) : L10n.t(.waitYourTurn))
+            }
+            return
+        }
+
+        if legalDestinations.contains(square), let selectedSquare {
+            Task { await submitMove(from: selectedSquare, to: square) }
+            return
+        }
+
+        let hasLegalMove = game.legalMoves.contains { $0.from == square }
+        if hasLegalMove, let piece = ChessPosition(fen: game.fen).pieces[square] {
+            selectedSquare = square
+            if moveGuideEnabled {
+                coachMessage = selectionHelp(for: piece, square: square)
+            }
+            Feedback.lightTap()
+            return
+        }
+
+        if let selectedSquare {
+            let piece = ChessPosition(fen: game.fen).pieces[selectedSquare]
+            presentToast(L10n.t(
+                .cantGoSquare,
+                square.uppercased(),
+                piece.map { illegalHelp(for: $0) } ?? L10n.t(.onlyHighlighted)
+            ))
+            Feedback.warning()
+            return
+        }
+
+        selectedSquare = nil
+        if let piece = ChessPosition(fen: game.fen).pieces[square], piece.isWhite != (session?.color == .white) {
+            presentToast(L10n.t(.opponentPiece))
+            Feedback.warning()
+        } else {
+            presentToast(L10n.t(.pieceCantMove))
+            Feedback.warning()
+        }
+    }
+
+    func requestHint() async {
+        guard let session, session.color != .spectator else { return }
+        guard hintsEnabled else {
+            presentToast(L10n.t(.turnOnHints))
+            return
+        }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            let response = try await api.hint(version: game.version, session: session)
+            merge(response)
+            let text = response.coachText ?? response.hint ?? response.message
+            privateHintMessage = text
+            privateSuggestedHint = response.suggestedHint
+            if moveGuideEnabled, let text {
+                coachMessage = text
+            } else if let text {
+                presentToast(text)
+            }
+            Feedback.success()
+        } catch {
+            show(error)
+        }
+    }
+
+    func playForMe() async {
+        guard let session, session.color != .spectator else { return }
+        guard playForMeEnabled else {
+            presentToast(L10n.t(.turnOnPlayForMe))
+            return
+        }
+        guard canMove else {
+            presentToast(L10n.t(.waitYourTurn))
+            return
+        }
+        isSubmittingMove = true
+        errorMessage = nil
+        defer { isSubmittingMove = false }
+
+        // Never fail for the player: retry server playForMe, then fall back to any legal move.
+        for attempt in 0..<4 {
+            do {
+                let response = try await api.playForMe(
+                    version: game.version,
+                    session: session,
+                    difficulty: computerDifficulty
+                )
+                selectedSquare = nil
+                merge(response)
+                Feedback.success()
+                presentToast(L10n.t(.computerPlayed, computerDifficulty.title))
+                return
+            } catch {
+                if attempt == 0, let refreshed = try? await api.state(session: session) {
+                    merge(refreshed)
+                }
+                // Prefer captures/checks over a random weak move when the server fails.
+                var move = game.legalMoves.first { $0.isCapture == true }
+                if move == nil {
+                    move = game.legalMoves.first { $0.isCheck == true }
+                }
+                if move == nil {
+                    let centers: Set<String> = ["d4", "e4", "d5", "e5", "c4", "f4", "c5", "f5"]
+                    move = game.legalMoves.first { centers.contains($0.to) }
+                }
+                if move == nil {
+                    move = game.legalMoves.first
+                }
+                if let move {
+                    do {
+                        let response = try await api.moveAssisted(
+                            from: move.from,
+                            to: move.to,
+                            promotion: move.promotion ?? "q",
+                            version: game.version,
+                            session: session,
+                            difficulty: computerDifficulty
+                        )
+                        selectedSquare = nil
+                        merge(response)
+                        Feedback.success()
+                        presentToast(L10n.t(.computerFallback))
+                        return
+                    } catch {
+                        try? await Task.sleep(nanoseconds: UInt64(150_000_000 * (attempt + 1)))
+                        if let refreshed = try? await api.state(session: session) {
+                            merge(refreshed)
+                        }
+                        continue
+                    }
+                }
+                try? await Task.sleep(nanoseconds: UInt64(150_000_000 * (attempt + 1)))
+                if let refreshed = try? await api.state(session: session) {
+                    merge(refreshed)
+                }
+                if !canMove { return }
+            }
+        }
+        // Last ditch: still try one legal assisted move without surfacing a scary alert.
+        if canMove, let move = game.legalMoves.first {
+            if let response = try? await api.moveAssisted(
+                from: move.from,
+                to: move.to,
+                promotion: move.promotion ?? "q",
+                version: game.version,
+                session: session,
+                difficulty: .easy
+            ) {
+                selectedSquare = nil
+                merge(response)
+                Feedback.success()
+                presentToast(L10n.t(.computerFallback))
+                return
+            }
+        }
+        presentToast(L10n.t(.serverBusy))
+        Feedback.warning()
+    }
+
+    func offerDraw() async {
+        guard let session, session.color != .spectator else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            merge(try await api.offerDraw(version: game.version, session: session))
+            presentToast(L10n.t(.drawOfferedByYou))
+        } catch {
+            show(error)
+        }
+    }
+
+    func respondDraw(accept: Bool) async {
+        guard let session, session.color != .spectator else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            merge(try await api.respondDraw(accept: accept, version: game.version, session: session))
+            Feedback.success()
+        } catch {
+            show(error)
+        }
+    }
+
+    func offerUndo() async {
+        guard let session, session.color != .spectator else { return }
+        guard game.moveCount > 0 else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            merge(try await api.offerUndo(version: game.version, session: session))
+            presentToast(L10n.t(.undoOfferedByYou))
+        } catch {
+            show(error)
+        }
+    }
+
+    func respondUndo(accept: Bool) async {
+        guard let session, session.color != .spectator else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            merge(try await api.respondUndo(accept: accept, version: game.version, session: session))
+            Feedback.success()
+        } catch {
+            show(error)
+        }
+    }
+
+    func refreshPastGames() async -> [ArchivedMatch] {
+        var local = MatchArchiveStore.load()
+        let token = session?.playerToken ?? MatchArchiveStore.latestPlayerToken
+        if let token,
+           let remote = try? await api.listArchives(playerToken: token),
+           !remote.isEmpty {
+            MatchArchiveStore.mergeServer(remote)
+            local = MatchArchiveStore.load()
+        }
+        return local
+    }
+
+    func resign() async {
+        guard let session, session.color != .spectator else { return }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            merge(try await api.resign(version: game.version, session: session))
+        } catch {
+            show(error)
+        }
+    }
+
+    func rematch() async {
+        guard let session, session.color != .spectator else { return }
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            merge(try await api.rematch(version: game.version, session: session))
+            selectedSquare = nil
+            quizFeedback = nil
+            showMatchReview = false
+            answeredQuizForVersion = nil
+            quizDismissTask?.cancel()
+            quizDismissTask = nil
+            clearPrivateHint()
+            Feedback.success()
+        } catch {
+            show(error)
+        }
+    }
+
+    func answerQuiz(_ option: QuizOption) {
+        guard let answer = game.quiz?.answerSquare?.lowercased() else { return }
+        if option.square.lowercased() == answer {
+            quizFeedback = "Nice! \(option.label) was the capturing square."
+            Feedback.success()
+        } else {
+            quizFeedback = "Not quite. The capturing square was \(answer.uppercased())."
+            Feedback.warning()
+        }
+        answeredQuizForVersion = game.version
+        quizDismissTask?.cancel()
+        quizDismissTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            guard !Task.isCancelled else { return }
+            guard answeredQuizForVersion == game.version else { return }
+            game.quiz = nil
+            quizFeedback = nil
+        }
+    }
+
+    var shouldShowQuiz: Bool {
+        guard moveGuideEnabled, game.quiz != nil else { return false }
+        return answeredQuizForVersion != game.version || quizFeedback != nil
+    }
+
+    func refresh() async {
+        guard let session else { return }
+        do {
+            if session.color == .spectator {
+                merge(try await api.spectate(roomCode: session.roomCode))
+            } else {
+                merge(try await api.state(session: session))
+            }
+            isReconnecting = false
+            if errorMessage == "Connection lost. Reconnecting…" {
+                errorMessage = nil
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            isReconnecting = true
+            errorMessage = "Connection lost. Reconnecting…"
+        }
+    }
+
+    func clearError() {
+        errorMessage = nil
+    }
+
+    func leaveGame() {
+        pollingTask?.cancel()
+        pollingTask = nil
+        store.clear()
+        session = nil
+        game = GameState()
+        selectedSquare = nil
+        errorMessage = nil
+        toastMessage = nil
+        quizFeedback = nil
+        showMatchReview = false
+        roomCodeInput = ""
+        clearPrivateHint()
+        quizDismissTask?.cancel()
+        quizDismissTask = nil
+        answeredQuizForVersion = nil
+        lastKnownVersion = -1
+        lastKnownTurn = nil
+    }
+
+    private func clearPrivateHint() {
+        privateSuggestedHint = nil
+        privateHintMessage = nil
+        game.suggestedHint = nil
+    }
+
+    func startPolling() {
+        guard session != nil, pollingTask == nil else { return }
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.refresh()
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+            }
+        }
+    }
+
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+    }
+
+    func shareRoomText() -> String {
+        "Join my Chess Duo game! Room code: \(game.roomCode)"
+    }
+
+    func copyRoomCode() {
+        UIPasteboard.general.string = game.roomCode
+        presentToast(L10n.t(.codeCopied))
+        Feedback.lightTap()
+    }
+
+    func setHintsEnabled(_ enabled: Bool) {
+        hintsEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "hintsEnabled")
+        if !enabled {
+            clearPrivateHint()
+            presentToast(L10n.t(.hintsOff))
+        } else {
+            presentToast(L10n.t(.hintsOn))
+        }
+    }
+
+    var boardSuggestedHint: SuggestedHint? {
+        hintsEnabled ? privateSuggestedHint : nil
+    }
+
+    var displayedCoachMessage: String {
+        if moveGuideEnabled, let privateHintMessage, !privateHintMessage.isEmpty {
+            return privateHintMessage
+        }
+        return coachMessage
+    }
+
+    func setMoveGuideEnabled(_ enabled: Bool) {
+        moveGuideEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "moveGuideEnabled")
+        presentToast(enabled ? L10n.t(.moveGuideOn) : L10n.t(.moveGuideOff))
+        if enabled {
+            coachMessage = game.coachMessage
+        }
+    }
+
+    func setPlayForMeEnabled(_ enabled: Bool) {
+        playForMeEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: "playForMeEnabled")
+        presentToast(enabled ? L10n.t(.playForMeOn) : L10n.t(.playForMeOff))
+    }
+
+    func setComputerDifficulty(_ difficulty: ComputerDifficulty) {
+        computerDifficulty = difficulty
+        UserDefaults.standard.set(difficulty.rawValue, forKey: "computerDifficulty")
+        presentToast(L10n.t(.computerSetTo, difficulty.title))
+    }
+
+    private func performLobbyRequest(
+        _ request: @escaping () async throws -> GameResponse
+    ) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            let response = try await request()
+            guard
+                let roomCode = response.roomCode,
+                let token = response.playerToken,
+                let color = response.color
+            else {
+                throw GameAPIError.invalidResponse
+            }
+            let newSession = PlayerSession(
+                roomCode: roomCode.uppercased(),
+                playerToken: token,
+                color: color,
+                playerName: playerName.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            session = newSession
+            store.save(newSession)
+            merge(response)
+            startPolling()
+        } catch {
+            show(error)
+        }
+    }
+
+    private func submitMove(from: String, to: String) async {
+        guard let session else { return }
+        isSubmittingMove = true
+        errorMessage = nil
+        defer { isSubmittingMove = false }
+        do {
+            let response = try await api.move(
+                from: from,
+                to: to,
+                promotion: "q",
+                version: game.version,
+                session: session
+            )
+            selectedSquare = nil
+            merge(response)
+            Feedback.success()
+        } catch {
+            show(error)
+            Feedback.warning()
+        }
+    }
+
+    private func merge(_ response: GameResponse) {
+        let previousVersion = game.version
+        let previousTurn = game.turn
+        let wasFinished = game.isFinished
+        let isPrivateHint = response.privateHint == true
+
+        if let roomCode = response.roomCode { game.roomCode = roomCode.uppercased() }
+        // Colors can swap when the partner joins — keep this phone's seat in sync.
+        if let color = response.color, let current = session, current.color != .spectator, color != current.color {
+            let updated = PlayerSession(
+                roomCode: current.roomCode,
+                playerToken: current.playerToken,
+                color: color,
+                playerName: current.playerName
+            )
+            session = updated
+            store.save(updated)
+        }
+        if let fen = response.fen {
+            game.fen = fen
+            let fields = fen.split(separator: " ")
+            if fields.count > 1 {
+                game.turn = fields[1] == "w" ? .white : .black
+            }
+        }
+        if let turn = response.turn { game.turn = turn }
+        if let status = response.status { game.status = status }
+        if let whiteName = response.whiteName { game.whiteName = whiteName }
+        if let blackName = response.blackName { game.blackName = blackName }
+        if let isCheck = response.isCheck { game.isCheck = isCheck }
+        if let result = response.result { game.result = result }
+        if let legalMoves = response.legalMoves { game.legalMoves = legalMoves }
+        if let version = response.version {
+            if version != previousVersion {
+                answeredQuizForVersion = nil
+                quizFeedback = nil
+                quizDismissTask?.cancel()
+                quizDismissTask = nil
+            }
+            game.version = version
+        }
+        if let moveCount = response.moveCount { game.moveCount = moveCount }
+
+        // Shared move commentary (what just happened) — never treat as the other player's private hint.
+        if !isPrivateHint {
+            if let coachText = response.coachText {
+                game.coachMessage = coachText
+                if moveGuideEnabled { coachMessage = coachText }
+            }
+            if let coachSource = response.coachSource { game.coachSource = coachSource }
+            // Never take suggestedHint from shared polls — hints are private-only.
+            game.suggestedHint = nil
+        } else if let suggestedHint = response.suggestedHint {
+            privateSuggestedHint = suggestedHint
+        }
+
+        if let coachHistory = response.coachHistory { game.coachHistory = coachHistory }
+        if let lastMove = response.lastMove { game.lastMove = lastMove }
+        if let quiz = response.quiz {
+            if answeredQuizForVersion == game.version {
+                // Keep the quiz hidden after this phone already answered it.
+                if quizFeedback == nil {
+                    game.quiz = nil
+                }
+            } else {
+                game.quiz = quiz
+            }
+        } else if response.version != nil {
+            game.quiz = nil
+        }
+
+        if game.version != previousVersion, previousVersion >= 0 {
+            clearPrivateHint()
+        }
+        if let threatened = response.threatenedSquares { game.threatenedSquares = threatened }
+        if let captured = response.captured { game.captured = captured }
+        if let goalText = response.goalText { game.goalText = goalText }
+        if let apiVersion = response.apiVersion { game.apiVersion = apiVersion }
+        if let moveHistory = response.moveHistory { game.moveHistory = moveHistory }
+        if let review = response.review {
+            game.review = review
+        } else if response.version != nil, response.review == nil, !game.isFinished {
+            game.review = nil
+        }
+        if response.drawOfferBy != nil || response.version != nil {
+            game.drawOfferBy = response.drawOfferBy
+        }
+        if response.undoOfferBy != nil || response.version != nil {
+            game.undoOfferBy = response.undoOfferBy
+        }
+
+        if let selectedSquare,
+           !game.legalMoves.contains(where: { $0.from == selectedSquare }) {
+            self.selectedSquare = nil
+        }
+
+        let justFinished = !wasFinished && game.isFinished
+        if previousVersion >= 0,
+           game.version > previousVersion,
+           let session,
+           previousTurn == session.color,
+           game.turn == session.color.opponent || game.isFinished {
+            // own move already handled
+        } else if previousVersion >= 0,
+                  game.version > previousVersion,
+                  let session,
+                  game.turn == session.color,
+                  previousTurn != session.color {
+            Feedback.opponentMoved()
+            if UIApplication.shared.applicationState != .active {
+                Feedback.notifyYourTurn(roomCode: game.roomCode)
+            } else {
+                presentToast(L10n.t(.yourTurnToast))
+            }
+        }
+
+        if justFinished {
+            if let review = game.review {
+                MatchArchiveStore.save(
+                    .fromFinishedGame(
+                        roomCode: game.roomCode,
+                        whiteName: game.whiteName,
+                        blackName: game.blackName,
+                        status: game.status,
+                        resultText: game.result ?? game.status,
+                        moveCount: game.moveCount,
+                        review: review,
+                        playerToken: session?.playerToken
+                    )
+                )
+                showMatchReview = true
+            }
+            Feedback.success()
+        }
+
+        lastKnownVersion = game.version
+        lastKnownTurn = game.turn
+    }
+
+    private func show(_ error: Error) {
+        let text = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        errorMessage = text
+        presentToast(text)
+    }
+
+    private func presentToast(_ text: String) {
+        toastMessage = text
+        toastTask?.cancel()
+        toastTask = Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if !Task.isCancelled {
+                toastMessage = nil
+            }
+        }
+    }
+
+    private func displayName(for color: PlayerColor) -> String {
+        color == .white ? game.whiteName : game.blackName
+    }
+
+    private func selectionHelp(for piece: ChessPiece, square: String) -> String {
+        "\(piece.accessibilityName.capitalized) on \(square.uppercased()). \(illegalHelp(for: piece)) Tap a highlighted square to move it."
+    }
+
+    private func illegalHelp(for piece: ChessPiece) -> String {
+        switch piece.symbol.lowercased() {
+        case "k": return L10n.t(.pieceHelpKing)
+        case "q": return L10n.t(.pieceHelpQueen)
+        case "r": return L10n.t(.pieceHelpRook)
+        case "b": return L10n.t(.pieceHelpBishop)
+        case "n": return L10n.t(.pieceHelpKnight)
+        default: return L10n.t(.pieceHelpPawn)
+        }
+    }
+}

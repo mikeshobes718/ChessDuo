@@ -1,0 +1,36 @@
+.DS_Store
+**/.DS_Store
+
+# Env / secrets (never commit)
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+**/pdks-secrets*
+**/Keys/
+
+# Node
+backend/node_modules/
+backend/.vercel/
+
+# Xcode / Swift
+ios/.build/
+ios/.build-device/
+ios/DerivedData/
+ios/**/xcuserdata/
+ios/*.xcuserstate
+**/xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+DerivedData/
+.build/
+
+# Misc
+*.log
+*.tmp
+.std_deploy_pid
+.build_pid
+ios/ChessCoach 2.xcodeproj/
+supabase/.temp/
