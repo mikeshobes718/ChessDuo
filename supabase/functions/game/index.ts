@@ -1,6 +1,6 @@
 import { Chess } from "npm:chess.js@1.4.0";
 
-const APP_API_VERSION = "2.7.1";
+const APP_API_VERSION = "2.7.2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const openRouterKey = Deno.env.get("OPENROUTER_API_KEY") ?? "";
@@ -336,9 +336,9 @@ function difficultySettings(difficulty: Difficulty) {
     return { depth: 2, quiescePly: 0, nodeLimit: 4500, rootMoves: 12, noise: 35, noiseCap: 80, blunderChance: 0.1 };
   }
   if (difficulty === "hard") {
-    return { depth: 2, quiescePly: 2, nodeLimit: 10000, rootMoves: 18, noise: 0, noiseCap: 0, blunderChance: 0 };
+    return { depth: 2, quiescePly: 3, nodeLimit: 11000, rootMoves: 20, noise: 0, noiseCap: 0, blunderChance: 0 };
   }
-  return { depth: 2, quiescePly: 1, nodeLimit: 7500, rootMoves: 16, noise: 10, noiseCap: 28, blunderChance: 0.02 };
+  return { depth: 2, quiescePly: 2, nodeLimit: 8000, rootMoves: 16, noise: 10, noiseCap: 28, blunderChance: 0.02 };
 }
 
 function openingBookPick(chess: Chess): EngineMove | null {
@@ -403,6 +403,16 @@ function evaluateBoard(chess: Chess): number {
   const rights = chess.fen().split(" ")[2] ?? "";
   if (rights.includes("K") || rights.includes("Q")) score += 18;
   if (rights.includes("k") || rights.includes("q")) score -= 18;
+
+  // Castled kings are usually safer — reward being tucked away.
+  for (const square of ["g1", "c1"]) {
+    const king = (chess as { get: (s: string) => { type: string; color: string } | null }).get(square);
+    if (king?.type === "k" && king.color === "w") score += 22;
+  }
+  for (const square of ["g8", "c8"]) {
+    const king = (chess as { get: (s: string) => { type: string; color: string } | null }).get(square);
+    if (king?.type === "k" && king.color === "b") score -= 22;
+  }
 
   // Center occupation bonus.
   for (const square of ["d4", "e4", "d5", "e5"]) {
@@ -546,6 +556,14 @@ function rankedMoves(
 
 function enginePick(chess: Chess, difficulty: Difficulty = "medium") {
   const settings = difficultySettings(difficulty);
+  const legal = orderMoves(chess.moves({ verbose: true }) as EngineMove[]);
+  // Mate in one: always take it, on every level.
+  const mateNow = legal.find((move) => move.san.includes("#"));
+  if (mateNow) return mateNow;
+  // Free captures are hard for humans to refuse — grab them unless we intentionally blunder.
+  const freeCapture = legal.find((move) => Boolean(move.captured));
+  if (difficulty === "hard" && freeCapture) return freeCapture;
+
   if (chess.history().length < 10) {
     const book = openingBookPick(chess);
     const bookChance = difficulty === "hard" ? 0.92 : difficulty === "medium" ? 0.7 : 0.45;
@@ -565,7 +583,6 @@ function enginePick(chess: Chess, difficulty: Difficulty = "medium") {
     ranked = rankedMoves(chess, 1, 0, 1200, 10);
   }
   if (!ranked.length) {
-    const legal = orderMoves(chess.moves({ verbose: true }) as EngineMove[]);
     return legal[0] ?? null;
   }
 
@@ -1127,14 +1144,17 @@ async function join(body: Record<string, unknown>) {
   const joinerHash = await hashToken(token);
   // Randomize colors so the room creator is not always White.
   const joinerIsWhite = Math.random() < 0.5;
+  // IMPORTANT: keep token hashes aligned with the correct seats.
+  const whiteHash = joinerIsWhite ? joinerHash : game.white_token_hash;
+  const blackHash = joinerIsWhite ? game.white_token_hash : joinerHash;
   const whiteName = joinerIsWhite ? joiner : game.white_name;
   const blackName = joinerIsWhite ? game.white_name : joiner;
   const coachText = uiCopy[lang].joinCoach(whiteName, blackName);
   const updated = await updateGame(game, {
     white_name: whiteName,
     black_name: blackName,
-    white_token_hash: joinerIsWhite ? joinerHash : game.white_token_hash,
-    black_token_hash: joinerIsWhite ? game.white_token_hash : joinerHash,
+    white_token_hash: whiteHash,
+    black_token_hash: blackHash,
     status: "active",
     coach_text: coachText,
     coach_source: "quick",
@@ -1346,7 +1366,7 @@ async function playForMe(body: Record<string, unknown>) {
   const difficulty = normalizeDifficulty(body.difficulty);
   let lastError: unknown = null;
 
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       const { game, color } = await authenticated(body);
       if (game.status !== "active") throw new HttpError("Game is not active");
@@ -1370,7 +1390,7 @@ async function playForMe(body: Record<string, unknown>) {
       const status = error instanceof HttpError ? error.status : 500;
       // Retry version races / transient resource failures.
       if (status === 409 || status >= 500) {
-        await new Promise((resolve) => setTimeout(resolve, 120 * (attempt + 1)));
+        await new Promise((resolve) => setTimeout(resolve, 140 * (attempt + 1)));
         continue;
       }
       throw error;

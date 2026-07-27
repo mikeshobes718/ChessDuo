@@ -12,6 +12,7 @@ struct ChessCoachApp: App {
             ContentView()
                 .environmentObject(model)
                 .preferredColorScheme(AppearanceMode(rawValue: appearanceMode)?.colorScheme)
+                .tint(DuoAccent.base)
                 // Rebuild UI when the in-app language changes.
                 .id(languagePreference)
         }

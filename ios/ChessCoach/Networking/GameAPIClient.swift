@@ -22,7 +22,7 @@ enum GameAPIError: LocalizedError {
 }
 
 struct GameAPIClient {
-    static let clientVersion = "2.7.1"
+    static let clientVersion = "2.7.2"
 
     private let session: URLSession
     private let baseURL: URL

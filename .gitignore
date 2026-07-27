@@ -15,6 +15,7 @@ backend/node_modules/
 backend/.vercel/
 
 # Xcode / Swift
+ios/build/
 ios/.build/
 ios/.build-device/
 ios/DerivedData/

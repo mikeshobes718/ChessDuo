@@ -66,11 +66,13 @@ struct PieceLegendSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            ZStack {
+                DuoBackground()
+                ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L10n.t(.pieceGuideTitle))
-                            .font(.title2.bold())
+                            .font(.title.bold())
                         Text(L10n.t(.pieceGuideSubtitle))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -100,13 +102,16 @@ struct PieceLegendSheet: View {
                         }
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+                        .duoCard(radius: 20)
                     }
                 }
                 .padding()
+                }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle(L10n.t(.pieceGuide))
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t(.done)) { dismiss() }

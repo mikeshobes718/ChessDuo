@@ -45,7 +45,7 @@ enum L10nKey: String {
     case offerUndo, offerUndoConfirmTitle, offerUndoConfirmMessage
     case acceptUndo, declineUndo, undoOfferedByThem, undoOfferedByYou
     case pastGames, pastGamesEmpty, pastGamesDetail, noScorecard
-    case computerFallback
+    case computerFallback, computerPlayedMove
 }
 
 
@@ -291,6 +291,7 @@ enum L10n {
         "pastGamesDetail": "Scorecards from games on this phone.",
         "noScorecard": "No scorecard for this match.",
         "computerFallback": "Computer played a safe move.",
+        "computerPlayedMove": "Computer (%@) played %@ → %@%@ for you.",
     ]
 
     private static let pt: [String: String] = [
@@ -518,6 +519,7 @@ enum L10n {
         "pastGamesDetail": "Placares das partidas neste telefone.",
         "noScorecard": "Sem placar para esta partida.",
         "computerFallback": "O computador fez uma jogada segura.",
+        "computerPlayedMove": "Computador (%@) jogou %@ → %@%@ por você.",
     ]
 
     private static let es: [String: String] = [
@@ -745,5 +747,6 @@ enum L10n {
         "pastGamesDetail": "Marcadores de partidas en este teléfono.",
         "noScorecard": "Sin marcador para esta partida.",
         "computerFallback": "La computadora jugó una jugada segura.",
+        "computerPlayedMove": "La computadora (%@) jugó %@ → %@%@ por ti.",
     ]
 }

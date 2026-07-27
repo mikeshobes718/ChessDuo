@@ -26,6 +26,7 @@
 		B46662F23FF4A4F875538184 /* AppearanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67A70451A8E22D9E08FFAC74 /* AppearanceMenu.swift */; };
 		C5E4D1A305D36F3D5760378B /* GameModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB89AC75819BA7183029F72 /* GameModels.swift */; };
 		C6F5AB80D27C0B0E65B56C54 /* ChessBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 410706CC55A3AAB6CC561EB1 /* ChessBoardView.swift */; };
+		D52FE7AF3866E54A4124BF9E /* DuoTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E4EBFD7219C354DCD21FC4 /* DuoTheme.swift */; };
 		D87BBC030D64DC6C0EE2DA3D /* ChessCoachApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C02CC47001BB8CA0952CF358 /* ChessCoachApp.swift */; };
 		DD58408BEEF596F5BA9CD505 /* LobbyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D16258D33AB4B161B64527B6 /* LobbyView.swift */; };
 		DE7E7FBD16FE8F3E656E0AE7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD201602E3B46616BE8BFBE /* SettingsView.swift */; };
@@ -56,6 +57,7 @@
 		DD5150432D380DCCFA1E40D5 /* BoardTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardTheme.swift; sourceTree = "<group>"; };
 		E028FD7831DF9F7DCA8CD8A2 /* ChessCoach.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChessCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E675AA1638848608CC8480DC /* GameAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAPIClient.swift; sourceTree = "<group>"; };
+		E6E4EBFD7219C354DCD21FC4 /* DuoTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTheme.swift; sourceTree = "<group>"; };
 		F2B66B176D8E384A1EF9045E /* PositionDrama.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PositionDrama.swift; sourceTree = "<group>"; };
 		F3B5D6927D6E11BF62A32B1A /* PieceLegendSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieceLegendSheet.swift; sourceTree = "<group>"; };
 		F98D340C5E8763841A93F55E /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 				21AC9B314FFBD0FE3DD01D96 /* AppLanguage.swift */,
 				DD5150432D380DCCFA1E40D5 /* BoardTheme.swift */,
 				B7B80D439849C129DA62D6EA /* ComputerDifficulty.swift */,
+				E6E4EBFD7219C354DCD21FC4 /* DuoTheme.swift */,
 				4895F705FBEDCB56C8201B6C /* Feedback.swift */,
 				54803E0162DC88A139D19F5B /* L10n.swift */,
 				C634E062A3340C1E8B7BDD7B /* MatchArchiveStore.swift */,
@@ -254,6 +257,7 @@
 				164A39A500D2D4085BA9306A /* CoachCard.swift in Sources */,
 				01AB14A19231D8DED974CA1B /* ComputerDifficulty.swift in Sources */,
 				8F0C4CDE84EE76BE5EC9467B /* ContentView.swift in Sources */,
+				D52FE7AF3866E54A4124BF9E /* DuoTheme.swift in Sources */,
 				7386CD3D07F46CC71518BC1D /* Feedback.swift in Sources */,
 				27342A7EA8CAE5BAC682686D /* GameAPIClient.swift in Sources */,
 				C5E4D1A305D36F3D5760378B /* GameModels.swift in Sources */,

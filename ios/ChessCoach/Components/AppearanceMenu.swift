@@ -34,6 +34,8 @@ struct BoardColorSettingsSheet: View {
 
     var body: some View {
         NavigationStack {
+            ZStack {
+                DuoBackground()
             Form {
                 Section("Presets") {
                     ForEach(BoardTheme.allCases.filter { $0 != .custom }) { theme in
@@ -76,8 +78,11 @@ struct BoardColorSettingsSheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .scrollContentBackground(.hidden)
+            }
             .navigationTitle(L10n.t(.boardColorsTitle))
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t(.done)) { dismiss() }

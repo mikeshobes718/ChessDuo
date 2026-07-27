@@ -11,6 +11,5 @@ struct ContentView: View {
                 GameView()
             }
         }
-        .tint(.green)
     }
 }

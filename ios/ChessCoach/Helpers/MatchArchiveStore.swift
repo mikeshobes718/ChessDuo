@@ -49,6 +49,16 @@ enum MatchArchiveStore {
         return items.sorted { $0.endedAt > $1.endedAt }
     }
 
+    static var knownTokens: [String] {
+        var tokens: [String] = []
+        for match in load() {
+            if let token = match.playerToken, !tokens.contains(token) {
+                tokens.append(token)
+            }
+        }
+        return tokens
+    }
+
     static func save(_ match: ArchivedMatch) {
         var items = load()
         if items.contains(where: {

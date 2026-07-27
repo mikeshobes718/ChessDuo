@@ -22,6 +22,7 @@ final class GameViewModel: ObservableObject {
     @Published var quizFeedback: String?
     @Published private(set) var hintsEnabled: Bool = UserDefaults.standard.object(forKey: "hintsEnabled") as? Bool ?? false
     @Published private(set) var moveGuideEnabled: Bool = UserDefaults.standard.object(forKey: "moveGuideEnabled") as? Bool ?? false
+    @Published private(set) var coachCollapsed: Bool = UserDefaults.standard.object(forKey: "coachCollapsed") as? Bool ?? false
     @Published private(set) var playForMeEnabled: Bool = UserDefaults.standard.object(forKey: "playForMeEnabled") as? Bool ?? false
     @Published private(set) var computerDifficulty: ComputerDifficulty = .stored
     @Published private(set) var privateSuggestedHint: SuggestedHint?
@@ -252,7 +253,18 @@ final class GameViewModel: ObservableObject {
                 selectedSquare = nil
                 merge(response)
                 Feedback.success()
-                presentToast(L10n.t(.computerPlayed, computerDifficulty.title))
+                if let last = response.lastMove, let from = last.from, let to = last.to {
+                    let sanSuffix = last.san.map { " (\($0))" } ?? ""
+                    presentToast(L10n.t(
+                        .computerPlayedMove,
+                        computerDifficulty.title,
+                        from.uppercased(),
+                        to.uppercased(),
+                        sanSuffix
+                    ))
+                } else {
+                    presentToast(L10n.t(.computerPlayed, computerDifficulty.title))
+                }
                 return
             } catch {
                 if attempt == 0, let refreshed = try? await api.state(session: session) {
@@ -372,12 +384,12 @@ final class GameViewModel: ObservableObject {
 
     func refreshPastGames() async -> [ArchivedMatch] {
         var local = MatchArchiveStore.load()
-        let token = session?.playerToken ?? MatchArchiveStore.latestPlayerToken
-        if let token,
-           let remote = try? await api.listArchives(playerToken: token),
-           !remote.isEmpty {
-            MatchArchiveStore.mergeServer(remote)
-            local = MatchArchiveStore.load()
+        let tokens = Array(Set([session?.playerToken, MatchArchiveStore.latestPlayerToken].compactMap { $0 } + MatchArchiveStore.knownTokens))
+        for token in tokens {
+            if let remote = try? await api.listArchives(playerToken: token), !remote.isEmpty {
+                MatchArchiveStore.mergeServer(remote)
+                local = MatchArchiveStore.load()
+            }
         }
         return local
     }
@@ -543,6 +555,11 @@ final class GameViewModel: ObservableObject {
         if enabled {
             coachMessage = game.coachMessage
         }
+    }
+
+    func setCoachCollapsed(_ collapsed: Bool) {
+        coachCollapsed = collapsed
+        UserDefaults.standard.set(collapsed, forKey: "coachCollapsed")
     }
 
     func setPlayForMeEnabled(_ enabled: Bool) {

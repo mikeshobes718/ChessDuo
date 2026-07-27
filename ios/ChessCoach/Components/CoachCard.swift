@@ -4,6 +4,7 @@ struct CoachCard: View {
     let message: String
     let source: String
     var onHistory: (() -> Void)? = nil
+    var onMinimize: (() -> Void)? = nil
 
     private var sourceLabel: String {
         switch source.lowercased() {
@@ -23,36 +24,50 @@ struct CoachCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "lightbulb.fill")
-                .font(.title3)
-                .foregroundStyle(.yellow)
-                .accessibilityHidden(true)
+            ZStack {
+                Circle()
+                    .fill(Color.yellow.opacity(0.16))
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.yellow)
+            }
+            .frame(width: 38, height: 38)
+            .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
                     Text(L10n.t(.moveGuide))
-                        .font(.headline)
+                        .font(.subheadline.weight(.bold))
                     Spacer()
-                    Text(sourceLabel)
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(sourceColor.opacity(0.18), in: Capsule())
-                        .foregroundStyle(sourceColor)
+                    DuoChip(text: sourceLabel, tint: sourceColor)
+                    if let onMinimize {
+                        Button(action: onMinimize) {
+                            Image(systemName: "chevron.down")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 26, height: 26)
+                                .background(.ultraThinMaterial, in: Circle())
+                                .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Minimize Move Guide")
+                    }
                 }
                 Text(message)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let onHistory {
-                    Button(L10n.t(.coachHistory), action: onHistory)
-                        .font(.caption.weight(.semibold))
+                    Button(action: onHistory) {
+                        Label(L10n.t(.coachHistory), systemImage: "clock.arrow.circlepath")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(DuoAccent.base)
+                    }
                 }
             }
-            Spacer(minLength: 0)
         }
-        .padding()
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+        .padding(14)
+        .duoCard(radius: 20)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Move Guide, \(sourceLabel). \(message)")
     }

@@ -8,54 +8,72 @@ struct PastGamesView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if matches.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.secondary)
-                        Text(L10n.t(.pastGamesEmpty))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    List(matches) { match in
-                        Button {
-                            selected = match
-                        } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text("\(match.whiteName) vs \(match.blackName)")
-                                        .font(.headline)
-                                    Spacer()
-                                    Text(match.resultText)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                                HStack {
-                                    Text(L10n.t(.roomPrefix, match.roomCode))
-                                    Spacer()
-                                    Text(match.endedAt, style: .date)
-                                }
-                                .font(.caption)
+            ZStack {
+                DuoBackground()
+
+                Group {
+                    if matches.isEmpty {
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(DuoAccent.base.opacity(0.12))
+                                    .frame(width: 78, height: 78)
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .font(.system(size: 30, weight: .bold))
+                                    .foregroundStyle(DuoAccent.base)
+                            }
+                            Text(L10n.t(.pastGamesEmpty))
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                                if let white = match.review.white?.accuracy,
-                                   let black = match.review.black?.accuracy {
-                                    Text("\(match.whiteName) \(white)% · \(match.blackName) \(black)%")
-                                        .font(.caption.weight(.semibold))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 24)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 12) {
+                                ForEach(matches) { match in
+                                    Button {
+                                        selected = match
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack {
+                                                Text("\(match.whiteName) vs \(match.blackName)")
+                                                    .font(.headline)
+                                                Spacer()
+                                                DuoChip(text: match.resultText, tint: DuoAccent.base)
+                                            }
+                                            HStack {
+                                                Text(L10n.t(.roomPrefix, match.roomCode))
+                                                Spacer()
+                                                Text(match.endedAt, style: .date)
+                                            }
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            if let white = match.review.white?.accuracy,
+                                               let black = match.review.black?.accuracy {
+                                                HStack(spacing: 8) {
+                                                    DuoChip(text: "\(match.whiteName) \(white)%", tint: .green)
+                                                    DuoChip(text: "\(match.blackName) \(black)%", tint: .blue)
+                                                }
+                                            }
+                                        }
+                                        .padding(14)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .duoCard()
+                                    .buttonStyle(.plain)
                                 }
                             }
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
                         }
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle(L10n.t(.pastGames))
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t(.done)) { dismiss() }

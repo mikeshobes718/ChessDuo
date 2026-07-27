@@ -29,11 +29,15 @@ struct GameView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if isWaitingForPartner {
-                    waitingRoom
-                } else {
-                    activeGame
+            ZStack {
+                DuoBackground()
+
+                Group {
+                    if isWaitingForPartner {
+                        waitingRoom
+                    } else {
+                        activeGame
+                    }
                 }
             }
             .navigationTitle(
@@ -42,6 +46,8 @@ struct GameView: View {
                     : L10n.t(.roomPrefix, model.game.roomCode)
             )
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Button {
@@ -49,7 +55,7 @@ struct GameView: View {
                     } label: {
                         Image(systemName: "gearshape")
                     }
-                        .accessibilityLabel(L10n.t(.settings))
+                    .accessibilityLabel(L10n.t(.settings))
                     if !isWaitingForPartner {
                         Button {
                             model.showLegend = true
@@ -76,15 +82,21 @@ struct GameView: View {
                         .font(.footnote.weight(.semibold))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(.regularMaterial, in: Capsule())
+                        .background(.thinMaterial, in: Capsule())
+                        .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
                         .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.toastMessage)
             .overlay {
                 if model.isSubmittingMove {
-                    ProgressView(L10n.t(.sendingMove))
-                        .padding()
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    ZStack {
+                        Color.black.opacity(0.14).ignoresSafeArea()
+                        ProgressView(L10n.t(.sendingMove))
+                            .padding(20)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
                 }
             }
             .alert(L10n.t(.resignConfirmTitle), isPresented: $showingResignConfirmation) {
@@ -138,16 +150,22 @@ struct GameView: View {
             }
             .sheet(isPresented: $model.showCoachHistory) {
                 NavigationStack {
-                    List(model.game.coachHistory.reversed()) { item in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.source.uppercased())
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(.secondary)
-                            Text(item.text)
+                    ZStack {
+                        DuoBackground()
+                        List(model.game.coachHistory.reversed()) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.source.uppercased())
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(.secondary)
+                                Text(item.text)
+                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
+                        .scrollContentBackground(.hidden)
                     }
                     .navigationTitle(L10n.t(.coachHistory))
+                    .navigationBarTitleDisplayMode(.large)
+                    .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button(L10n.t(.done)) { model.showCoachHistory = false }
@@ -182,16 +200,16 @@ struct GameView: View {
     }
 
     private var waitingRoom: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 22) {
             if model.isReconnecting {
                 reconnectBanner
             }
 
-            Spacer(minLength: 12)
+            Spacer(minLength: 8)
 
             VStack(spacing: 10) {
                 Text(L10n.t(.roomCreated))
-                    .font(.title2.bold())
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
                 Text(L10n.t(.sendCodePartner))
                     .font(.body)
                     .foregroundStyle(.secondary)
@@ -200,9 +218,13 @@ struct GameView: View {
             }
 
             Text(model.game.roomCode)
-                .font(.system(size: 48, weight: .bold, design: .monospaced))
-                .tracking(4)
-                .padding(.vertical, 8)
+                .font(.system(size: 46, weight: .bold, design: .monospaced))
+                .tracking(6)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .duoCard(radius: 26)
+                .shadow(color: DuoAccent.base.opacity(0.22), radius: 22, y: 10)
+                .padding(.horizontal, 24)
                 .accessibilityLabel("Room code \(model.game.roomCode)")
 
             VStack(spacing: 12) {
@@ -210,15 +232,15 @@ struct GameView: View {
                     model.copyRoomCode()
                 } label: {
                     Label(L10n.t(.copyRoomCode), systemImage: "doc.on.doc.fill")
-                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .duoPrimaryButton()
 
                 ShareLink(item: model.shareRoomText()) {
                     Label(L10n.t(.shareToMessages), systemImage: "square.and.arrow.up")
-                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .duoSecondaryButton()
             }
             .padding(.horizontal, 24)
 
@@ -232,14 +254,26 @@ struct GameView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 28)
             }
-            .padding(.top, 12)
+            .padding(.top, 10)
 
             Text(L10n.t(.assistsStayOff))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
-                .padding(.top, 8)
+                .padding(.top, 4)
+
+            Button {
+                showingSettings = true
+            } label: {
+                Label(L10n.t(.settings), systemImage: "gearshape")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DuoAccent.base)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 24)
 
             Spacer()
         }
@@ -252,16 +286,25 @@ struct GameView: View {
             }
 
             Text(model.turnBanner)
-                .font(.headline.weight(.bold))
+                .font(.subheadline.weight(.bold))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
-                .background(
-                    model.canMove ? Color.accentColor.opacity(0.18) : Color(.secondarySystemBackground),
-                    in: RoundedRectangle(cornerRadius: 12)
+                .background {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(DuoAccent.base.opacity(model.canMove ? 0.14 : 0.04))
+                        }
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(model.canMove ? DuoAccent.base.opacity(0.35) : Color.white.opacity(0.22), lineWidth: 0.8)
                 )
-                .padding(.horizontal, 8)
+                .shadow(color: Color.black.opacity(0.08), radius: 10, y: 4)
+                .padding(.horizontal, 10)
 
             if model.drama.level != .calm, model.drama.headline != nil {
                 dramaBanner
@@ -270,10 +313,10 @@ struct GameView: View {
             Text(model.game.goalText)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 14)
 
             ScrollView {
-                VStack(spacing: 12) {
+                VStack(spacing: 14) {
                     gameHeader
                     capturedRow
 
@@ -291,25 +334,59 @@ struct GameView: View {
                         customColors: customColors,
                         onSelect: model.select
                     )
-                    .padding(.horizontal, 4)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .padding(10)
+                    .duoCard(radius: 26)
+                    .padding(.horizontal, 6)
 
                     metaRow
                     quizBlock
                     actionButtons
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 10)
             }
 
             if model.moveGuideEnabled {
-                CoachCard(
-                    message: model.displayedCoachMessage,
-                    source: model.privateHintMessage == nil ? model.game.coachSource : "ai",
-                    onHistory: { model.showCoachHistory = true }
-                )
-                .padding(.horizontal, 8)
-                .padding(.bottom, 4)
+                if model.coachCollapsed {
+                    collapsedCoachPill
+                } else {
+                    CoachCard(
+                        message: model.displayedCoachMessage,
+                        source: model.privateHintMessage == nil ? model.game.coachSource : "ai",
+                        onHistory: { model.showCoachHistory = true },
+                        onMinimize: { model.setCoachCollapsed(true) }
+                    )
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
         }
+    }
+
+    private var collapsedCoachPill: some View {
+        Button {
+            model.setCoachCollapsed(false)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.yellow)
+                Text(L10n.t(.moveGuide))
+                    .font(.footnote.weight(.bold))
+                Image(systemName: "chevron.up")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.28), lineWidth: 0.7))
+            .shadow(color: Color.black.opacity(0.12), radius: 10, y: 4)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 6)
     }
 
     private var reconnectBanner: some View {
@@ -351,17 +428,24 @@ struct GameView: View {
         .foregroundStyle(.white)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .padding(.horizontal, 12)
-        .background(dramaBannerColor(drama), in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 8)
+        .background(
+            LinearGradient(
+                colors: [dramaBannerColor(drama), dramaBannerColor(drama).opacity(0.85)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+        .shadow(color: dramaBannerColor(drama).opacity(0.35), radius: 16, y: 8)
+        .padding(.horizontal, 10)
         .transition(.move(edge: .top).combined(with: .opacity))
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: drama.level)
     }
 
     private func dramaBannerColor(_ drama: GameDrama) -> Color {
         if drama.aboutYou == false, drama.level == .check || drama.level == .critical || drama.level == .pressure {
-            // Partner is in trouble — warmer / less "you are dying" red.
             switch drama.level {
             case .pressure: return Color.orange.opacity(0.85)
             case .check: return Color(red: 0.85, green: 0.35, blue: 0.15)
@@ -373,14 +457,14 @@ struct GameView: View {
         case .pressure: return Color.orange.opacity(0.92)
         case .check: return Color.red.opacity(0.88)
         case .critical, .finishedLoss: return Color.red
-        case .finishedWin: return Color.green.opacity(0.9)
+        case .finishedWin: return Color(red: 0.20, green: 0.72, blue: 0.40)
         case .calm: return Color.gray
         }
     }
 
     private var gameHeader: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 8) {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
                 playerChip(
                     name: model.game.whiteName,
                     side: .white,
@@ -404,6 +488,8 @@ struct GameView: View {
                     model.copyRoomCode()
                 } label: {
                     Label(L10n.t(.copyCode), systemImage: "doc.on.doc")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(DuoAccent.base)
                 }
                 Spacer()
                 Button {
@@ -413,11 +499,13 @@ struct GameView: View {
                         model.boardFlipped ? L10n.t(.unflipBoard) : L10n.t(.flipBoard),
                         systemImage: "arrow.up.arrow.down"
                     )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DuoAccent.base)
                 }
             }
-            .font(.caption.weight(.semibold))
         }
-        .padding(.top, 4)
+        .padding(12)
+        .duoCard(radius: 18)
     }
 
     private func playerChip(name: String, side: PlayerColor, systemImage: String) -> some View {
@@ -441,13 +529,17 @@ struct GameView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
         .background(
             focused
                 ? dramaBannerColor(model.drama).opacity(0.95)
-                : Color(.secondarySystemBackground),
-            in: RoundedRectangle(cornerRadius: 10)
+                : Color(.systemBackground),
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(focused ? Color.white.opacity(0.2) : Color.primary.opacity(0.06), lineWidth: 1)
         )
         .foregroundStyle(focused ? Color.white : Color.primary)
         .frame(maxWidth: 150)
@@ -462,6 +554,7 @@ struct GameView: View {
                 .font(.caption)
         }
         .foregroundStyle(.secondary)
+        .padding(.horizontal, 2)
     }
 
     private var metaRow: some View {
@@ -493,16 +586,17 @@ struct GameView: View {
            let question = quiz.question,
            let options = quiz.options,
            !options.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text(question)
                     .font(.subheadline.weight(.semibold))
                 if model.quizFeedback == nil {
-                    HStack {
+                    HStack(spacing: 10) {
                         ForEach(options) { option in
                             Button(option.label) {
                                 model.answerQuiz(option)
                             }
-                            .buttonStyle(.bordered)
+                            .frame(maxWidth: .infinity)
+                            .duoSecondaryButton()
                         }
                     }
                 }
@@ -512,8 +606,8 @@ struct GameView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(10)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+            .padding(12)
+            .duoCard(radius: 16)
         }
     }
 
@@ -525,26 +619,28 @@ struct GameView: View {
                     Text(L10n.t(.drawOfferedByYou))
                         .font(.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(10)
-                        .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                        .padding(12)
+                        .duoCard(radius: 14)
                 } else {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 10) {
                         Text(L10n.t(.drawOfferedByThem, offer == .white ? model.game.whiteName : model.game.blackName))
                             .font(.footnote.weight(.semibold))
-                        HStack {
+                        HStack(spacing: 10) {
                             Button(L10n.t(.acceptDraw)) {
                                 Task { await model.respondDraw(accept: true) }
                             }
-                            .buttonStyle(.borderedProminent)
+                            .frame(maxWidth: .infinity)
+                            .duoPrimaryButton()
                             Button(L10n.t(.declineDraw), role: .destructive) {
                                 Task { await model.respondDraw(accept: false) }
                             }
-                            .buttonStyle(.bordered)
+                            .frame(maxWidth: .infinity)
+                            .duoSecondaryButton()
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(10)
-                    .background(Color.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
+                    .padding(12)
+                    .duoCard(radius: 14)
                 }
             }
 
@@ -553,33 +649,35 @@ struct GameView: View {
                     Text(L10n.t(.undoOfferedByYou))
                         .font(.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(10)
-                        .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                        .padding(12)
+                        .duoCard(radius: 14)
                 } else {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 10) {
                         Text(L10n.t(.undoOfferedByThem, offer == .white ? model.game.whiteName : model.game.blackName))
                             .font(.footnote.weight(.semibold))
-                        HStack {
+                        HStack(spacing: 10) {
                             Button(L10n.t(.acceptUndo)) {
                                 Task { await model.respondUndo(accept: true) }
                             }
-                            .buttonStyle(.borderedProminent)
+                            .frame(maxWidth: .infinity)
+                            .duoPrimaryButton()
                             Button(L10n.t(.declineUndo), role: .destructive) {
                                 Task { await model.respondUndo(accept: false) }
                             }
-                            .buttonStyle(.bordered)
+                            .frame(maxWidth: .infinity)
+                            .duoSecondaryButton()
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(10)
-                    .background(Color.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
+                    .padding(12)
+                    .duoCard(radius: 14)
                 }
             }
         }
     }
 
     private var actionButtons: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             offerBanners
 
             if model.playForMeEnabled {
@@ -587,9 +685,9 @@ struct GameView: View {
                     showingPlayForMeConfirmation = true
                 } label: {
                     Label(L10n.t(.playTurnForMe, model.computerDifficulty.title), systemImage: "cpu")
-                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .duoPrimaryButton()
                 .disabled(
                     model.isLoading ||
                     model.isSubmittingMove ||
@@ -605,9 +703,9 @@ struct GameView: View {
                         Task { await model.requestHint() }
                     } label: {
                         Label(L10n.t(.hint), systemImage: "lightbulb")
-                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .duoSecondaryButton()
                     .disabled(model.isLoading || model.game.isFinished || !model.canMove || model.session?.color == .spectator)
                 }
 
@@ -615,9 +713,9 @@ struct GameView: View {
                     showingDrawConfirmation = true
                 } label: {
                     Label(L10n.t(.offerDraw), systemImage: "equal.circle")
-                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .duoSecondaryButton()
                 .disabled(
                     model.isLoading ||
                     model.game.isFinished ||
@@ -631,9 +729,9 @@ struct GameView: View {
                     showingUndoConfirmation = true
                 } label: {
                     Label(L10n.t(.offerUndo), systemImage: "arrow.uturn.backward")
-                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .duoSecondaryButton()
                 .disabled(
                     model.isLoading ||
                     model.game.isFinished ||
@@ -646,9 +744,9 @@ struct GameView: View {
                     showingResignConfirmation = true
                 } label: {
                     Label(L10n.t(.resign), systemImage: "flag")
-                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
+                .duoSecondaryButton()
                 .disabled(model.isLoading || model.game.isFinished || model.session?.color == .spectator)
             }
 
@@ -658,9 +756,9 @@ struct GameView: View {
                         model.showMatchReview = true
                     } label: {
                         Label(L10n.t(.matchReview), systemImage: "chart.bar")
-                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .duoSecondaryButton()
                 }
 
                 if model.session?.color != .spectator {
@@ -668,9 +766,9 @@ struct GameView: View {
                         Task { await model.rematch() }
                     } label: {
                         Label(L10n.t(.rematch), systemImage: "arrow.clockwise")
-                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .duoPrimaryButton()
                     .disabled(model.isLoading)
                 }
             }
