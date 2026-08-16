@@ -305,6 +305,7 @@ struct GameView: View {
                 )
                 .shadow(color: Color.black.opacity(0.08), radius: 10, y: 4)
                 .padding(.horizontal, 10)
+                .padding(.top, 8)
 
             if model.drama.level != .calm, model.drama.headline != nil {
                 dramaBanner

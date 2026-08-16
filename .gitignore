@@ -34,4 +34,5 @@ DerivedData/
 .std_deploy_pid
 .build_pid
 ios/ChessCoach 2.xcodeproj/
+ios/ChessCoach 3.xcodeproj/
 supabase/.temp/
