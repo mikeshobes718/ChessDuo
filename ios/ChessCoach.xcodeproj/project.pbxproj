@@ -24,6 +24,7 @@
 		AB74322CCFC1FAC8F8A5ADF8 /* PositionDrama.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B66B176D8E384A1EF9045E /* PositionDrama.swift */; };
 		AFEFD954E01A12B7D561F1A1 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F98D340C5E8763841A93F55E /* SessionStore.swift */; };
 		B46662F23FF4A4F875538184 /* AppearanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67A70451A8E22D9E08FFAC74 /* AppearanceMenu.swift */; };
+		B5366C62CBE6D18624506D3D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 27D9D642B31BB2DEE4B7EFB3 /* PrivacyInfo.xcprivacy */; };
 		C5E4D1A305D36F3D5760378B /* GameModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB89AC75819BA7183029F72 /* GameModels.swift */; };
 		C6F5AB80D27C0B0E65B56C54 /* ChessBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 410706CC55A3AAB6CC561EB1 /* ChessBoardView.swift */; };
 		D52FE7AF3866E54A4124BF9E /* DuoTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E4EBFD7219C354DCD21FC4 /* DuoTheme.swift */; };
@@ -37,6 +38,7 @@
 /* Begin PBXFileReference section */
 		03A47C7D3C4556C7AD8D5DFD /* MatchReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchReviewView.swift; sourceTree = "<group>"; };
 		21AC9B314FFBD0FE3DD01D96 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		27D9D642B31BB2DEE4B7EFB3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3A39B17C19E09E33A7E27276 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		410706CC55A3AAB6CC561EB1 /* ChessBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessBoardView.swift; sourceTree = "<group>"; };
 		4179125235ADD07C7C78E787 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 			children = (
 				3A39B17C19E09E33A7E27276 /* Assets.xcassets */,
 				4179125235ADD07C7C78E787 /* Info.plist */,
+				27D9D642B31BB2DEE4B7EFB3 /* PrivacyInfo.xcprivacy */,
 				A610B1FE8CFF784020706341 /* App */,
 				B2433678EB5B90BE06AC8F98 /* Components */,
 				7C1E4A9E005EBF72FFB87939 /* Helpers */,
@@ -209,6 +212,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					BA14DCA1A643C0DE9CFC6D23 = {
+						DevelopmentTeam = N7LRRN2YGY;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -238,6 +242,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1087FFF77B8FB3ACC95ECECB /* Assets.xcassets in Resources */,
+				B5366C62CBE6D18624506D3D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -313,6 +318,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = N7LRRN2YGY;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -349,11 +355,15 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N7LRRN2YGY;
 				INFOPLIST_FILE = ChessCoach/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins -external-plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins#$(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server";
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikeshobes.chesscoachduo;
 				PRODUCT_NAME = ChessCoach;
@@ -369,11 +379,15 @@
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N7LRRN2YGY;
 				INFOPLIST_FILE = ChessCoach/Info.plist;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) -plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins -external-plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins#$(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server";
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikeshobes.chesscoachduo;
 				PRODUCT_NAME = ChessCoach;
@@ -417,6 +431,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = N7LRRN2YGY;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
