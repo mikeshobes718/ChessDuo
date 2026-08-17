@@ -1,0 +1,39 @@
+name: supabase-keepalive
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+    - cron: "17 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Touch Postgres so the free project does not pause
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "Missing GitHub Actions secrets SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY"
+            exit 1
+          fi
+          # Free-tier pause is based on database activity. The Edge Function
+          # {"action":"version"} path does not query Postgres, so it is not enough.
+          code="$(curl -sS -o /tmp/keepalive.json -w '%{http_code}' \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Accept: application/json" \
+            -H "Prefer: count=exact" \
+            "${SUPABASE_URL}/rest/v1/games?select=id&limit=1")"
+          if [ "$code" != "200" ]; then
+            echo "Keep-alive query failed with HTTP ${code}"
+            exit 1
+          fi
+          echo "Keep-alive query succeeded (HTTP ${code})"
