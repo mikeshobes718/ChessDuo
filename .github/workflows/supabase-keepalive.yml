@@ -30,9 +30,9 @@ jobs:
             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
             -H "Accept: application/json" \
-            -H "Prefer: count=exact" \
             "${SUPABASE_URL}/rest/v1/games?select=id&limit=1")"
-          if [ "$code" != "200" ]; then
+          # 200 is a normal select. 206 can appear if a Range/Prefer count header is used.
+          if [ "$code" != "200" ] && [ "$code" != "206" ]; then
             echo "Keep-alive query failed with HTTP ${code}"
             exit 1
           fi
