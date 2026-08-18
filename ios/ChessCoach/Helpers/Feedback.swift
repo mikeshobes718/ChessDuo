@@ -48,6 +48,7 @@ enum Feedback {
     }
 
     static func notifyYourTurn(roomCode: String) {
+        requestNotificationPermission()
         let content = UNMutableNotificationContent()
         content.title = "Chess Duo"
         content.body = "It's your turn in room \(roomCode)."

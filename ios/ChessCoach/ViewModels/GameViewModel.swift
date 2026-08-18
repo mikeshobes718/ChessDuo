@@ -47,7 +47,6 @@ final class GameViewModel: ObservableObject {
             game.roomCode = session.roomCode
             startPolling()
         }
-        Feedback.requestNotificationPermission()
     }
 
     var legalDestinations: Set<String> {
