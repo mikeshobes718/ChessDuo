@@ -14,11 +14,25 @@ struct ChessBoardView: View {
     let customColors: BoardCustomColors
     let onSelect: (String) -> Void
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var previousPieces: [String: ChessPiece] = [:]
     @State private var animatingPiece: (piece: ChessPiece, from: String, to: String)?
     @State private var shakeOffset: CGFloat = 0
     @State private var pulse = false
     @State private var lastDramaLevel: DramaLevel = .calm
+    @State private var parsedFen: String = ""
+    @State private var parsedPosition = ChessPosition(fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+
+    private var position: ChessPosition {
+        if fen != parsedFen {
+            parsedFen = fen
+            parsedPosition = ChessPosition(fen: fen)
+        }
+        return parsedPosition
+    }
+
+    // RepeatForever animations keep burning CPU while backgrounded; only run them in the foreground.
+    private var animationsActive: Bool { scenePhase == .active }
 
     private var files: [Character] {
         orientation == .black ? Array("hgfedcba") : Array("abcdefgh")
@@ -37,7 +51,6 @@ struct ChessBoardView: View {
             let label: CGFloat = 20
             let boardSize = min(proxy.size.width - label * 2, proxy.size.height - label * 2)
             let squareSize = max(boardSize / 8, 34)
-            let position = ChessPosition(fen: fen)
 
             VStack(spacing: 0) {
                 fileLabels(squareSize: squareSize, labelHeight: label)
@@ -48,7 +61,6 @@ struct ChessBoardView: View {
 
                     ZStack {
                         boardGrid(position: position, squareSize: squareSize)
-
                         if let animatingPiece {
                             PieceGlyphView(piece: animatingPiece.piece, size: squareSize)
                                 .position(center(of: animatingPiece.to, squareSize: squareSize))
@@ -58,9 +70,11 @@ struct ChessBoardView: View {
                         if drama.isAlarming || drama.level == .finishedWin {
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(dramaBorderColor, lineWidth: drama.level >= .critical ? 4 : 2.5)
-                                .opacity(pulse ? 0.95 : 0.35)
+                                .opacity(pulse || !animationsActive ? 0.95 : 0.35)
                                 .animation(
-                                    .easeInOut(duration: drama.level >= .critical ? 0.45 : 0.7).repeatForever(autoreverses: true),
+                                    animationsActive
+                                        ? .easeInOut(duration: drama.level >= .critical ? 0.45 : 0.7).repeatForever(autoreverses: true)
+                                        : .easeInOut(duration: 0.3),
                                     value: pulse
                                 )
                         }
@@ -78,8 +92,12 @@ struct ChessBoardView: View {
                     .onChange(of: drama.level) { level in
                         handleDramaChange(level)
                     }
+                    .onChange(of: scenePhase) { _ in
+                        // Re-evaluate pulse state when moving between foreground and background.
+                        pulse = animationsActive && (drama.showsBoardPulse || drama.level == .pressure)
+                    }
                     .onAppear {
-                        pulse = drama.showsBoardPulse || drama.level == .pressure
+                        pulse = animationsActive && (drama.showsBoardPulse || drama.level == .pressure)
                         lastDramaLevel = drama.level
                     }
 
@@ -91,7 +109,7 @@ struct ChessBoardView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .onAppear {
-                previousPieces = ChessPosition(fen: fen).pieces
+                previousPieces = position.pieces
             }
         }
         .aspectRatio(1.08, contentMode: .fit)
@@ -148,10 +166,11 @@ struct ChessBoardView: View {
                         }
                         if drama.kingSquare == square, drama.showsBoardPulse || drama.level == .pressure {
                             dramaKingOverlay
-                                .opacity(pulse ? 0.9 : 0.35)
+                                .opacity(pulse || !animationsActive ? 0.9 : 0.35)
                                 .animation(
-                                    .easeInOut(duration: drama.level >= .critical ? 0.4 : 0.75)
-                                        .repeatForever(autoreverses: true),
+                                    animationsActive
+                                        ? .easeInOut(duration: drama.level >= .critical ? 0.4 : 0.75).repeatForever(autoreverses: true)
+                                        : .easeInOut(duration: 0.3),
                                     value: pulse
                                 )
                         }
@@ -209,7 +228,11 @@ struct ChessBoardView: View {
 
     private func animateIfNeeded(newFen: String) {
         let next = ChessPosition(fen: newFen).pieces
-        defer { previousPieces = next }
+        defer {
+            previousPieces = next
+            parsedFen = newFen
+            parsedPosition = ChessPosition(fen: newFen)
+        }
         guard let lastMove, let from = lastMove.from, let to = lastMove.to else { return }
         guard let piece = next[to] ?? previousPieces[from] else { return }
         animatingPiece = (piece, from, to)
@@ -244,7 +267,7 @@ struct ChessBoardView: View {
     }
 
     private func handleDramaChange(_ level: DramaLevel) {
-        pulse = level == .pressure || level.showsBoardPulseEquivalent
+        pulse = animationsActive && (level == .pressure || level.showsBoardPulseEquivalent)
         if level.showsBoardShakeEquivalent, level != lastDramaLevel {
             shakeBoard()
             if level >= .check {

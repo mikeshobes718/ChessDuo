@@ -38,6 +38,10 @@ struct LobbyView: View {
                     }
                 }
             }
+            .onAppear(perform: consumeDeepLink)
+            .onChange(of: model.roomCodeInput) { _ in
+                consumeDeepLink()
+            }
             .overlay(alignment: .top) {
                 if let toast = model.toastMessage {
                     Text(toast)
@@ -300,6 +304,11 @@ struct LobbyView: View {
         }
         .duoCard(prominent: prominent)
         .buttonStyle(.plain)
+    }
+
+    private func consumeDeepLink() {
+        guard let code = model.consumePendingDeepLink() else { return }
+        step = .join
     }
 
     private func stepLabel(_ text: String) -> some View {

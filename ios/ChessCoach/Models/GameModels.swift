@@ -193,6 +193,7 @@ struct GameResponse: Decodable {
     var review: MatchReview?
     var drawOfferBy: PlayerColor?
     var undoOfferBy: PlayerColor?
+    var changed: Bool?
 
     private enum CodingKeys: String, CodingKey {
         case roomCode, room, code, playerToken, token, color, playerColor
@@ -201,7 +202,7 @@ struct GameResponse: Decodable {
         case coachHistory, version, moveCount, legalMoves, moves, game, names
         case lastMove, suggestedHint, quiz, threatenedSquares, captured
         case hintsRemaining, dailyHintLimit, goalText, apiVersion, privateHint
-        case moveHistory, review, drawOfferBy, undoOfferBy
+        case moveHistory, review, drawOfferBy, undoOfferBy, changed
     }
 
     init(from decoder: Decoder) throws {
@@ -257,6 +258,7 @@ struct GameResponse: Decodable {
         } else if container.contains(.undoOfferBy), (try? container.decodeNil(forKey: .undoOfferBy)) == true {
             undoOfferBy = nil
         }
+        changed = try? container.decode(Bool.self, forKey: .changed)
     }
 
     private static func string(

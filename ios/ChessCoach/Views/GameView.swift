@@ -191,10 +191,17 @@ struct GameView: View {
             }
             .onChange(of: scenePhase) { phase in
                 if phase == .active {
+                    model.clearBadge()
                     model.startPolling()
                 } else {
                     model.stopPolling()
                 }
+            }
+            .sheet(item: $model.pendingPromotion) { promotion in
+                PromotionPickerSheet { piece in
+                    model.choosePromotion(piece)
+                }
+                .presentationDetents([.height(320)])
             }
         }
     }
@@ -782,5 +789,49 @@ struct GameView: View {
             guard let character = symbol.first else { return nil }
             return ChessPiece(symbol: character).glyph
         }.joined(separator: " ")
+    }
+}
+
+struct PromotionPickerSheet: View {
+    let onChoose: (String) -> Void
+
+    private let options: [(piece: String, glyph: Character, name: String)] = [
+        ("q", "♛", "Queen"),
+        ("r", "♜", "Rook"),
+        ("b", "♝", "Bishop"),
+        ("n", "♞", "Knight"),
+    ]
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text("Promote your pawn")
+                .font(.headline)
+            Text("Pick the piece your pawn becomes.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 14) {
+                ForEach(options, id: \.piece) { option in
+                    Button {
+                        onChoose(option.piece)
+                    } label: {
+                        VStack(spacing: 6) {
+                            Text(String(option.glyph))
+                                .font(.system(size: 44))
+                            Text(option.name)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Promote to \(option.name)")
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity)
     }
 }

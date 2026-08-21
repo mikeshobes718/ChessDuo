@@ -2,6 +2,12 @@ import Combine
 import Foundation
 import UIKit
 
+struct PendingPromotion: Identifiable {
+    let id = UUID()
+    let from: String
+    let to: String
+}
+
 @MainActor
 final class GameViewModel: ObservableObject {
     @Published var playerName = ""
@@ -28,6 +34,8 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var privateSuggestedHint: SuggestedHint?
     @Published private(set) var privateHintMessage: String?
     @Published var showMatchReview = false
+    @Published var pendingPromotion: PendingPromotion?
+    @Published private(set) var pendingPushToken: String?
 
     private let api: GameAPIClient
     private let store: SessionStore
@@ -37,11 +45,14 @@ final class GameViewModel: ObservableObject {
     private var toastTask: Task<Void, Never>?
     private var quizDismissTask: Task<Void, Never>?
     private var answeredQuizForVersion: Int?
+    private var promotionContext: (from: String, to: String)?
+    private var pendingDeepLinkCode: String?
 
     init(api: GameAPIClient = GameAPIClient(), store: SessionStore = SessionStore()) {
         self.api = api
         self.store = store
         session = store.load()
+        SharedGameModel.shared = self
         if let session {
             playerName = session.playerName
             game.roomCode = session.roomCode
@@ -152,9 +163,15 @@ final class GameViewModel: ObservableObject {
             store.save(newSession)
             merge(response)
             startPolling()
+            registerForPushIfAvailable()
         } catch {
             show(error)
         }
+    }
+
+    func consumePendingDeepLink() -> String? {
+        defer { pendingDeepLinkCode = nil }
+        return pendingDeepLinkCode
     }
 
     func select(square: String) {
@@ -166,7 +183,13 @@ final class GameViewModel: ObservableObject {
         }
 
         if legalDestinations.contains(square), let selectedSquare {
-            Task { await submitMove(from: selectedSquare, to: square) }
+            if isPromotionMove(from: selectedSquare, to: square) {
+                promotionContext = (selectedSquare, square)
+                pendingPromotion = PendingPromotion(from: selectedSquare, to: square)
+                Feedback.lightTap()
+            } else {
+                Task { await submitMove(from: selectedSquare, to: square) }
+            }
             return
         }
 
@@ -456,7 +479,13 @@ final class GameViewModel: ObservableObject {
             if session.color == .spectator {
                 merge(try await api.spectate(roomCode: session.roomCode))
             } else {
-                merge(try await api.state(session: session))
+                let known = lastKnownVersion >= 0 ? lastKnownVersion : nil
+                let response = try await api.state(session: session, sinceVersion: known)
+                if response.changed == false {
+                    lastKnownVersion = response.version ?? lastKnownVersion
+                    return
+                }
+                merge(response)
             }
             isReconnecting = false
             if errorMessage == "Connection lost. Reconnecting…" {
@@ -505,7 +534,8 @@ final class GameViewModel: ObservableObject {
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh()
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                let finished = await self?.game.isFinished ?? false
+                try? await Task.sleep(nanoseconds: finished ? 5_000_000_000 : 1_500_000_000)
             }
         }
     }
@@ -516,7 +546,7 @@ final class GameViewModel: ObservableObject {
     }
 
     func shareRoomText() -> String {
-        "Join my Chess Duo game! Room code: \(game.roomCode)"
+        "Join my Chess Duo game! Room code: \(game.roomCode)\nchessduo://room/\(game.roomCode)"
     }
 
     func copyRoomCode() {
@@ -598,12 +628,70 @@ final class GameViewModel: ObservableObject {
             store.save(newSession)
             merge(response)
             startPolling()
+            registerForPushIfAvailable()
         } catch {
             show(error)
         }
     }
 
-    private func submitMove(from: String, to: String) async {
+    func handleDeviceToken(_ tokenData: Data) {
+        let hex = tokenData.map { String(format: "%02x", $0) }.joined()
+        pendingPushToken = hex
+        registerForPushIfAvailable()
+    }
+
+    func registerForPushIfAvailable() {
+        guard let session, session.color != .spectator else { return }
+        Feedback.requestNotificationPermission()
+        UIApplication.shared.registerForRemoteNotifications()
+        guard let hex = pendingPushToken else { return }
+        let sentToken = hex
+        let sentSession = session
+        Task { [weak self] in
+            try? await self?.api.registerPush(apnsToken: sentToken, session: sentSession)
+        }
+    }
+
+    func clearBadge() {
+        UIApplication.shared.applicationIconBadgeNumber = 0
+    }
+
+    func handleRoomLink(_ code: String) {
+        guard session == nil else { return }
+        roomCodeInput = code.uppercased()
+        pendingDeepLinkCode = code.uppercased()
+    }
+
+    private func isPromotionMove(from: String, to: String) -> Bool {
+        let files = "abcdefgh"
+        guard let fromFile = files.firstIndex(of: from.lowercased().first ?? " "),
+              let toFile = files.firstIndex(of: to.lowercased().first ?? " "),
+              let fromRank = Int(from.suffix(1)),
+              let toRank = Int(to.suffix(1)),
+              fromFile == toFile || abs(files.distance(from: fromFile, to: toFile)) == 1
+        else { return false }
+        let isWhiteMove = session?.color == .white
+        let reachedLastRank = isWhiteMove ? toRank == 8 : toRank == 1
+        let startedPenultimate = isWhiteMove ? fromRank == 7 : fromRank == 2
+        guard reachedLastRank, startedPenultimate else { return false }
+        return game.legalMoves.contains { move in
+            move.from == from.lowercased() && move.to == to.lowercased() && move.promotion != nil
+        }
+    }
+
+    func choosePromotion(_ piece: String) {
+        guard let context = promotionContext else { return }
+        promotionContext = nil
+        pendingPromotion = nil
+        Task { await submitMove(from: context.from, to: context.to, promotion: piece) }
+    }
+
+    func cancelPromotion() {
+        promotionContext = nil
+        pendingPromotion = nil
+    }
+
+    private func submitMove(from: String, to: String, promotion: String = "q") async {
         guard let session else { return }
         isSubmittingMove = true
         errorMessage = nil
@@ -612,7 +700,7 @@ final class GameViewModel: ObservableObject {
             let response = try await api.move(
                 from: from,
                 to: to,
-                promotion: "q",
+                promotion: promotion,
                 version: game.version,
                 session: session
             )
@@ -630,6 +718,13 @@ final class GameViewModel: ObservableObject {
         let previousTurn = game.turn
         let wasFinished = game.isFinished
         let isPrivateHint = response.privateHint == true
+
+        if let version = response.version, version == previousVersion, previousVersion >= 0,
+           response.fen == nil, response.status == nil, response.coachText == nil,
+           response.coachHistory == nil, response.legalMoves == nil, !isPrivateHint {
+            lastKnownVersion = version
+            return
+        }
 
         if let roomCode = response.roomCode { game.roomCode = roomCode.uppercased() }
         // Colors can swap when the partner joins — keep this phone's seat in sync.

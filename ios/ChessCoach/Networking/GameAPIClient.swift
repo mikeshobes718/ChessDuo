@@ -22,7 +22,7 @@ enum GameAPIError: LocalizedError {
 }
 
 struct GameAPIClient {
-    static let clientVersion = "2.7.2"
+    static let clientVersion = "2.8.0"
 
     private let session: URLSession
     private let baseURL: URL
@@ -60,8 +60,18 @@ struct GameAPIClient {
         ])
     }
 
-    func state(session: PlayerSession) async throws -> GameResponse {
-        try await send(authenticatedPayload(action: "state", session: session))
+    func state(session: PlayerSession, sinceVersion: Int? = nil) async throws -> GameResponse {
+        var payload = authenticatedPayload(action: "state", session: session)
+        if let sinceVersion {
+            payload["sinceVersion"] = sinceVersion
+        }
+        return try await send(payload)
+    }
+
+    func registerPush(apnsToken: String, session: PlayerSession) async throws {
+        var payload = authenticatedPayload(action: "registerPush", session: session)
+        payload["apnsToken"] = apnsToken
+        _ = try await send(payload)
     }
 
     func move(
