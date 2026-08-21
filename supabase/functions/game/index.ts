@@ -1,10 +1,15 @@
 import { Chess } from "npm:chess.js@1.4.0";
 
-const APP_API_VERSION = "2.7.2";
+const APP_API_VERSION = "2.8.0";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const openRouterKey = Deno.env.get("OPENROUTER_API_KEY") ?? "";
 const openAIKey = Deno.env.get("OPENAI_API_KEY") ?? "";
+const apnsKey = Deno.env.get("APNS_KEY") ?? "";
+const apnsKeyId = Deno.env.get("APNS_KEY_ID") ?? "";
+const apnsTeamId = Deno.env.get("APNS_TEAM_ID") ?? "";
+const apnsBundleId = Deno.env.get("APNS_BUNDLE_ID") ?? "";
+const pushConfigured = Boolean(apnsKey && apnsKeyId && apnsTeamId && apnsBundleId);
 const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 type AppLang = "en" | "pt" | "es";
@@ -30,6 +35,14 @@ const uiCopy: Record<AppLang, {
   createCoach: string;
   joinCoach: (white: string, joiner: string) => string;
   rematchCoach: string;
+  pushJoined: (name: string, code: string) => string;
+  pushYourTurn: (name: string, code: string) => string;
+  pushDrawOffer: (name: string, code: string) => string;
+  pushUndoOffer: (name: string, code: string) => string;
+  pushDrawAnswer: (name: string, code: string) => string;
+  pushUndoAnswer: (name: string, code: string) => string;
+  pushRematch: (name: string, code: string) => string;
+  pushGameOver: (text: string, code: string) => string;
   tipMove: (mover: string, from: string, to: string, san: string, next: string) => string;
   tipHint: (from: string, to: string, san: string) => string;
   tipHintNone: string;
@@ -43,7 +56,14 @@ const uiCopy: Record<AppLang, {
     createCoach: "Share the room code (or tap Share). Colors are picked at random when your partner joins — White moves first. Tip: FaceTime while you play so you can talk through moves together.",
     joinCoach: (white, black) => `Both players are ready. ${white} plays White and moves first. ${black} plays Black. Tap a white piece to see where it can go.`,
     rematchCoach: "Rematch started. Same colors. White moves first. Goal: put the other king in checkmate.",
-    tipMove: (mover, from, to, san, next) => `Quick tip: ${mover} played ${from} → ${to} (${san}). ${next}, look for checks, captures, and threats.`,
+    pushJoined: (name, code) => `${name} joined room ${code}. It's your move.`,
+    pushYourTurn: (name, code) => `${name} moved. It's your turn in room ${code}.`,
+    pushDrawOffer: (name, code) => `${name} offers a draw in room ${code}.`,
+    pushUndoOffer: (name, code) => `${name} asks to undo a move in room ${code}.`,
+    pushDrawAnswer: (name, code) => `${name} answered your draw offer in room ${code}.`,
+    pushUndoAnswer: (name, code) => `${name} answered your undo request in room ${code}.`,
+    pushRematch: (name, code) => `${name} started a rematch in room ${code}.`,
+    pushGameOver: (text, code) => `${text} in room ${code}. Tap to see the match review.`,    tipMove: (mover, from, to, san, next) => `Quick tip: ${mover} played ${from} → ${to} (${san}). ${next}, look for checks, captures, and threats.`,
     tipHint: (from, to, san) => `Quick tip: try ${from} → ${to} (${san}). Look for checks, captures, and safe developing moves.`,
     tipHintNone: "Quick tip: there are no legal moves in this position.",
     tipGeneric: "Quick tip: look for checks, captures, and threats.",
@@ -56,6 +76,13 @@ const uiCopy: Record<AppLang, {
     createCoach: "Compartilhe o código da sala (ou toque em Compartilhar). As cores são sorteadas quando seu parceiro entrar — as Brancas começam. Dica: façam FaceTime enquanto jogam.",
     joinCoach: (white, black) => `Os dois estão prontos. ${white} joga de Brancas e começa. ${black} joga de Pretas. Toque numa peça branca para ver para onde ela pode ir.`,
     rematchCoach: "Revanche começada. Mesmas cores. As Brancas jogam primeiro. Objetivo: dar xeque-mate.",
+    pushJoined: (name, code) => `${name} entrou na sala ${code}. Sua vez.`,
+    pushYourTurn: (name, code) => `${name} jogou. Sua vez na sala ${code}.`,
+    pushDrawOffer: (name, code) => `${name} propôs empate na sala ${code}.`,
+    pushUndoOffer: (name, code) => `${name} pediu para desfazer na sala ${code}.`,
+    pushDrawAnswer: (name, code) => `${name} respondeu à oferta de empate na sala ${code}.`,
+    pushUndoAnswer: (name, code) => `${name} respondeu ao pedido de desfazer na sala ${code}.`,
+    pushRematch: (name, code) => `${name} começou uma revanche na sala ${code}.`,
     tipMove: (mover, from, to, san, next) => `Dica rápida: ${mover} jogou ${from} → ${to} (${san}). ${next}, procure xeques, capturas e ameaças.`,
     tipHint: (from, to, san) => `Dica rápida: tente ${from} → ${to} (${san}). Procure xeques, capturas e desenvolvimento seguro.`,
     tipHintNone: "Dica rápida: não há jogadas legais nesta posição.",
@@ -69,6 +96,13 @@ const uiCopy: Record<AppLang, {
     createCoach: "Comparte el código de la sala (o toca Compartir). Los colores se eligen al azar cuando tu pareja se una — las Blancas empiezan. Consejo: hagan FaceTime mientras juegan.",
     joinCoach: (white, black) => `Los dos están listos. ${white} juega con Blancas y mueve primero. ${black} juega con Negras. Toca una pieza blanca para ver a dónde puede ir.`,
     rematchCoach: "Revancha empezada. Mismos colores. Las Blancas mueven primero. Objetivo: dar jaque mate.",
+    pushJoined: (name, code) => `${name} entró en la sala ${code}. Es tu turno.`,
+    pushYourTurn: (name, code) => `${name} movió. Es tu turno en la sala ${code}.`,
+    pushDrawOffer: (name, code) => `${name} propone tablas en la sala ${code}.`,
+    pushUndoOffer: (name, code) => `${name} pide deshacer en la sala ${code}.`,
+    pushDrawAnswer: (name, code) => `${name} respondió a tu oferta de tablas en la sala ${code}.`,
+    pushUndoAnswer: (name, code) => `${name} respondió a tu pedido de deshacer en la sala ${code}.`,
+    pushRematch: (name, code) => `${name} empezó una revancha en la sala ${code}.`,
     tipMove: (mover, from, to, san, next) => `Consejo rápido: ${mover} jugó ${from} → ${to} (${san}). ${next}, busca jaques, capturas y amenazas.`,
     tipHint: (from, to, san) => `Consejo rápido: prueba ${from} → ${to} (${san}). Busca jaques, capturas y desarrollo seguro.`,
     tipHintNone: "Consejo rápido: no hay jugadas legales en esta posición.",
@@ -162,6 +196,176 @@ function playerToken() {
 async function hashToken(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function base64UrlToBytes(value: string) {
+  const padded = value.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const raw = atob(padded);
+  return Uint8Array.from(raw, (character) => character.charCodeAt(0));
+}
+
+function base64UrlEncode(bytes: Uint8Array) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+
+function pemToDer(pem: string) {
+  const body = pem
+    .replace(/-----BEGIN [^-]+-----/g, "")
+    .replace(/-----END [^-]+-----/g, "")
+    .replace(/\s+/g, "");
+  return Uint8Array.from(atob(body), (character) => character.charCodeAt(0));
+}
+
+let cachedApnsJwt: { token: string; exp: number } | null = null;
+
+async function apnsJwt() {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedApnsJwt && cachedApnsJwt.exp - 60 > now) return cachedApnsJwt.token;
+  const header = { alg: "ES256", kid: apnsKeyId };
+  const payload = { iss: apnsTeamId, iat: now, exp: now + 1800 };
+  const encode = (value: unknown) => base64UrlEncode(new TextEncoder().encode(JSON.stringify(value)));
+  const unsigned = `${encode(header)}.${encode(payload)}`;
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToDer(apnsKey).buffer as ArrayBuffer,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, cryptoKey, new TextEncoder().encode(unsigned)));
+  // APNs wants a raw r||s signature, not DER.
+  const half = signature.length / 2;
+  let r = signature.slice(0, half);
+  let s = signature.slice(half);
+  const trim = (part: Uint8Array) => {
+    let start = 0;
+    while (start < part.length - 1 && part[start] === 0) start += 1;
+    let out = part.slice(start);
+    if (out.length > 32) out = out.slice(out.length - 32);
+    return out;
+  };
+  r = trim(r);
+  s = trim(s);
+  const rawSignature = new Uint8Array(64);
+  rawSignature.set(r, Math.max(0, 32 - r.length));
+  rawSignature.set(s, 32 + Math.max(0, 32 - s.length));
+  const token = `${unsigned}.${base64UrlEncode(rawSignature)}`;
+  cachedApnsJwt = { token, exp: now + 1800 };
+  return token;
+}
+
+async function deletePushToken(apnsToken: string) {
+  try {
+    const query = new URLSearchParams({ apns_token: `eq.${apnsToken}` });
+    await database(`push_tokens?${query}`, { method: "DELETE" });
+  } catch (error) {
+    console.error("deletePushToken failed", error);
+  }
+}
+
+async function sendApns(deviceToken: string, payload: Record<string, unknown>, collapseId: string) {
+  if (!pushConfigured) return;
+  try {
+    const jwt = await apnsJwt();
+    const response = await fetch(`https://api.push.apple.com/3/device/${deviceToken}`, {
+      method: "POST",
+      headers: {
+        authorization: `bearer ${jwt}`,
+        "apns-topic": apnsBundleId,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+        "apns-collapse-id": collapseId,
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error("APNs delivery failed", response.status, detail);
+      if (response.status === 410 || response.status === 403) {
+        await deletePushToken(deviceToken);
+      } else if (response.status === 400 && detail.includes("BadDeviceToken")) {
+        await deletePushToken(deviceToken);
+      }
+    }
+  } catch (error) {
+    console.error("APNs delivery failed", error);
+  }
+}
+
+async function pushToColor(
+  game: Game,
+  color: "white" | "black",
+  kind: string,
+  alert: string,
+  badge = 1,
+) {
+  if (!pushConfigured) return;
+  const hash = color === "white" ? game.white_token_hash : game.black_token_hash;
+  if (!hash) return;
+  const query = new URLSearchParams({
+    player_token_hash: `eq.${hash}`,
+    select: "apns_token",
+  });
+  try {
+    const rows = await database(`push_tokens?${query}`);
+    for (const row of rows ?? []) {
+      await sendApns(
+        String(row.apns_token ?? ""),
+        {
+          aps: {
+            alert: { title: "Chess Duo", body: alert },
+            badge,
+            sound: "default",
+            "thread-id": game.room_code,
+          },
+          roomCode: game.room_code,
+          kind,
+        },
+        `${game.room_code}-${kind}`,
+      );
+    }
+  } catch (error) {
+    console.error("pushToColor failed", error);
+  }
+}
+
+async function pushToOpponent(game: Game, color: string, kind: string, alert: string) {
+  if (color !== "white" && color !== "black") return;
+  await pushToColor(game, color === "white" ? "black" : "white", kind, alert);
+}
+
+async function registerPush(body: Record<string, unknown>) {
+  const token = String(body.playerToken ?? body.token ?? "");
+  const apnsToken = String(body.apnsToken ?? "").trim();
+  if (!token) throw new HttpError("Missing player token", 401);
+  if (!/^[0-9a-fA-F]{64}$/.test(apnsToken)) throw new HttpError("Invalid device token", 400);
+  const hash = await hashToken(token);
+  const roomCode = String(body.roomCode ?? "").trim().toUpperCase() || null;
+  const query = new URLSearchParams({
+    player_token_hash: `eq.${hash}`,
+    apns_token: `eq.${apnsToken.toLowerCase()}`,
+    select: "id",
+    limit: "1",
+  });
+  const existing = await database(`push_tokens?${query}`);
+  const row = { player_token_hash: hash, room_code: roomCode, apns_token: apnsToken.toLowerCase(), updated_at: new Date().toISOString() };
+  if (existing?.length) {
+    await database(`push_tokens?id=eq.${existing[0].id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(row),
+    });
+  } else {
+    await database("push_tokens", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(row),
+    });
+  }
+  return { registered: true };
 }
 
 async function database(path: string, init: RequestInit = {}) {
@@ -785,9 +989,10 @@ function displayCoachForLanguage(game: Game, lang: AppLang) {
 
 function displayCoachHistory(game: Game, lang: AppLang) {
   const moves = Array.isArray(game.move_history) ? game.move_history : [];
+  const stamp = `v${game.version}`;
   if (!moves.length) {
     const latest = displayCoachForLanguage(game, lang);
-    return latest.text ? [{ text: latest.text, source: latest.source, at: new Date().toISOString() }] : [];
+    return latest.text ? [{ text: latest.text, source: latest.source, at: stamp }] : [];
   }
   const copy = uiCopy[lang];
   return moves.slice(-16).map((entry, offset, list) => {
@@ -800,7 +1005,7 @@ function displayCoachHistory(game: Game, lang: AppLang) {
     const text = absoluteIndex < 6
       ? lessonForMove(absoluteIndex, mover, san, String(entry.from ?? ""), String(entry.to ?? ""), lang)
       : copy.tipMove(mover, from, to, san || `${from}-${to}`, next);
-    return { text, source: absoluteIndex < 6 ? "lesson" : "quick", at: new Date().toISOString() };
+    return { text, source: absoluteIndex < 6 ? "lesson" : "quick", at: `${stamp}-${absoluteIndex}` };
   });
 }
 
@@ -1162,6 +1367,15 @@ async function join(body: Record<string, unknown>) {
     quiz: null,
     suggested_hint: null,
   });
+  const creatorColor = joinerIsWhite ? "black" : "white";
+  try {
+    const waitUntil = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil;
+    const alert = uiCopy[lang].pushJoined(blackName, game.room_code);
+    if (waitUntil) waitUntil(pushToColor(updated, creatorColor, "joined", alert));
+    else pushToColor(updated, creatorColor, "joined", alert);
+  } catch (error) {
+    console.error("join push scheduling failed", error);
+  }
   return {
     ...publicGame(updated, joinerIsWhite ? "white" : "black", lang),
     playerToken: token,
@@ -1178,6 +1392,48 @@ async function authenticated(body: Record<string, unknown>) {
   const game = await getGame(String(body.roomCode ?? ""));
   if (!game) throw new HttpError("Room not found", 404);
   return { game, color: await colorFor(game, String(body.playerToken ?? "")) };
+}
+
+async function updateCoachOnly(gameId: string, changes: Record<string, unknown>) {
+  const query = new URLSearchParams({ id: `eq.${gameId}`, select: "id" });
+  try {
+    await database(`games?${query}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(changes),
+    });
+  } catch (error) {
+    console.error("updateCoachOnly failed", error);
+  }
+}
+
+async function runMoveCoachInBackground(game: Game, lang: AppLang) {
+  try {
+    const chess = new Chess(game.fen);
+    const last = game.last_move ?? {};
+    const coach = await coaching({
+      kind: "move",
+      chess,
+      color: String(last.by ?? "white"),
+      whiteName: game.white_name,
+      blackName: game.black_name,
+      move: {
+        san: String(last.san ?? ""),
+        from: String(last.from ?? ""),
+        to: String(last.to ?? ""),
+        captured: last.captured ? String(last.captured) : null,
+      },
+      moveCount: game.move_count ?? 0,
+      language: lang,
+    });
+    await updateCoachOnly(game.id, {
+      coach_text: coach.text,
+      coach_source: coach.source,
+      coach_history: historyPush(game, coach.text, coach.source),
+    });
+  } catch (error) {
+    console.error("runMoveCoachInBackground failed", error);
+  }
 }
 
 async function applyPlayedMove(
@@ -1249,21 +1505,17 @@ async function applyPlayedMove(
       source: "quick",
     };
   } else {
-    coach = await coaching({
-      kind: "move",
-      chess,
-      color,
-      whiteName: game.white_name,
-      blackName: game.black_name,
-      move: {
-        san: played.san,
-        from: played.from,
-        to: played.to,
-        captured: played.captured ?? null,
-      },
-      moveCount,
-      language: lang,
-    });
+    // Keep the AI coach out of the request path — persist the move now, refine the coach later.
+    coach = {
+      text: uiCopy[lang].tipMove(
+        playerName ?? "Player",
+        played.from.toUpperCase(),
+        played.to.toUpperCase(),
+        played.san,
+        color === "white" ? game.black_name ?? "Black" : game.white_name,
+      ),
+      source: "quick",
+    };
   }
 
   const labels: Record<AppLang, {
@@ -1341,6 +1593,27 @@ async function applyPlayedMove(
     undo_offer_by: null,
   });
   if (review) await archiveMatch(updated);
+  if (!options.computerAssisted && (openRouterKey || openAIKey)) {
+    const coachGame: Game = { ...updated, coach_text: "", coach_source: "quick" };
+    try {
+      const waitUntil = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil;
+      if (waitUntil) {
+        waitUntil(runMoveCoachInBackground(coachGame, lang));
+      } else {
+        runMoveCoachInBackground(coachGame, lang);
+      }
+    } catch (error) {
+      console.error("coach scheduling failed", error);
+    }
+  }
+  const opponentColor: "white" | "black" = color === "white" ? "black" : "white";
+  const opponentName = color === "white" ? game.black_name ?? "Black" : game.white_name;
+  if (status === "active") {
+    pushToOpponent(updated, color, "turn", uiCopy[lang].pushYourTurn(opponentName, updated.room_code));
+  } else {
+    const result = resultText(status, lang) ?? "Game over";
+    pushToOpponent(updated, color, "gameover", uiCopy[lang].pushGameOver(result, updated.room_code));
+  }
   return publicGame(updated, color, lang);
 }
 
@@ -1485,6 +1758,7 @@ async function offerDraw(body: Record<string, unknown>) {
     coach_source: "quick",
     coach_history: historyPush(game, coachText, "quick"),
   });
+  pushToOpponent(updated, color, "drawoffer", uiCopy[lang].pushDrawOffer(name, updated.room_code));
   return publicGame(updated, color, lang);
 }
 
@@ -1497,6 +1771,7 @@ async function respondDraw(body: Record<string, unknown>) {
   if (!offer || offer === color) throw new HttpError("There is no draw offer to answer");
   const accept = body.accept === true || String(body.accept ?? "").toLowerCase() === "true";
   const copy = endGameCopy(lang);
+  const offererName = offer === "white" ? game.white_name : game.black_name ?? "Black";
   if (!accept) {
     const name = color === "white" ? game.white_name : game.black_name ?? "Black";
     const coachText = copy.drawDeclined(name);
@@ -1506,6 +1781,7 @@ async function respondDraw(body: Record<string, unknown>) {
       coach_source: "quick",
       coach_history: historyPush(game, coachText, "quick"),
     });
+    pushToColor(updated, offer, "drawanswer", uiCopy[lang].pushDrawAnswer(offererName, updated.room_code));
     return publicGame(updated, color, lang);
   }
   const history = Array.isArray(game.move_history) ? game.move_history : [];
@@ -1528,6 +1804,7 @@ async function respondDraw(body: Record<string, unknown>) {
     draw_offer_by: null,
     undo_offer_by: null,
   });
+  pushToColor(updated, offer, "drawanswer", uiCopy[lang].pushDrawAnswer(offererName, updated.room_code));
   await archiveMatch(updated);
   return publicGame(updated, color, lang);
 }
@@ -1551,6 +1828,7 @@ async function offerUndo(body: Record<string, unknown>) {
     coach_source: "quick",
     coach_history: historyPush(game, coachText, "quick"),
   });
+  pushToOpponent(updated, color, "undooffer", uiCopy[lang].pushUndoOffer(name, updated.room_code));
   return publicGame(updated, color, lang);
 }
 
@@ -1564,6 +1842,7 @@ async function respondUndo(body: Record<string, unknown>) {
   const accept = body.accept === true || String(body.accept ?? "").toLowerCase() === "true";
   const copy = endGameCopy(lang);
   const name = color === "white" ? game.white_name : game.black_name ?? "Black";
+  const offererName = offer === "white" ? game.white_name : game.black_name ?? "Black";
   if (!accept) {
     const coachText = copy.undoDeclined(name);
     const updated = await updateGame(game, {
@@ -1572,6 +1851,7 @@ async function respondUndo(body: Record<string, unknown>) {
       coach_source: "quick",
       coach_history: historyPush(game, coachText, "quick"),
     });
+    pushToColor(updated, offer, "undoanswer", uiCopy[lang].pushUndoAnswer(offererName, updated.room_code));
     return publicGame(updated, color, lang);
   }
   const history = Array.isArray(game.move_history) ? [...game.move_history] : [];
@@ -1607,6 +1887,7 @@ async function respondUndo(body: Record<string, unknown>) {
     undo_offer_by: null,
     draw_offer_by: null,
   });
+  pushToColor(updated, offer, "undoanswer", uiCopy[lang].pushUndoAnswer(offererName, updated.room_code));
   return publicGame(updated, color, lang);
 }
 
@@ -1691,6 +1972,9 @@ async function rematch(body: Record<string, unknown>) {
     draw_offer_by: null,
     undo_offer_by: null,
   });
+  const opponentColor: "white" | "black" = color === "white" ? "black" : "white";
+  const opponentName = color === "white" ? game.black_name ?? "Black" : game.white_name;
+  pushToOpponent(updated, color, "rematch", uiCopy[lang].pushRematch(opponentName, updated.room_code));
   return publicGame(updated, color, lang);
 }
 
@@ -1718,8 +2002,13 @@ Deno.serve(async (request) => {
       spectate,
       rematch,
       version,
+      registerPush,
       state: async (value) => {
         const { game, color } = await authenticated(value);
+        const sinceVersion = Number(value.sinceVersion);
+        if (Number.isFinite(sinceVersion) && sinceVersion > 0 && sinceVersion === game.version) {
+          return { changed: false, version: game.version };
+        }
         return publicGame(game, color, normalizeLanguage(value.language));
       },
       move,
