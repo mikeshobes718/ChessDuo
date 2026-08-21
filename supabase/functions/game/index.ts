@@ -344,27 +344,16 @@ async function registerPush(body: Record<string, unknown>) {
   if (!/^[0-9a-fA-F]{64}$/.test(apnsToken)) throw new HttpError("Invalid device token", 400);
   const hash = await hashToken(token);
   const roomCode = String(body.roomCode ?? "").trim().toUpperCase() || null;
-  const query = new URLSearchParams({
-    player_token_hash: `eq.${hash}`,
-    apns_token: `eq.${apnsToken.toLowerCase()}`,
-    select: "id",
-    limit: "1",
-  });
-  const existing = await database(`push_tokens?${query}`);
   const row = { player_token_hash: hash, room_code: roomCode, apns_token: apnsToken.toLowerCase(), updated_at: new Date().toISOString() };
-  if (existing?.length) {
-    await database(`push_tokens?id=eq.${existing[0].id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify(row),
-    });
-  } else {
-    await database("push_tokens", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify(row),
-    });
-  }
+  // Atomic upsert on apns_token: two racing registrations must not collide on the unique index.
+  await database(`push_tokens?on_conflict=apns_token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "return=representation,resolution=merge-duplicates",
+    },
+    body: JSON.stringify(row),
+  });
   return { registered: true };
 }
 
