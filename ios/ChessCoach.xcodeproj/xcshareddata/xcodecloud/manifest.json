@@ -1,0 +1,9 @@
+{
+  "id" : "606e9e00-375c-45b7-8642-d50cd6ff746f",
+  "targets" : [
+    {
+      "id" : "3b775fbb-f0c0-4aa8-9097-29dd9d21382d",
+      "name" : "ChessCoach"
+    }
+  ]
+}

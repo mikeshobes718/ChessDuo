@@ -21,6 +21,7 @@
 		86B51B4499A245F3EB660B54 /* PieceLegendSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3B5D6927D6E11BF62A32B1A /* PieceLegendSheet.swift */; };
 		8F0C4CDE84EE76BE5EC9467B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 664155451CEC988C1F1CF209 /* ContentView.swift */; };
 		91CB828A8FE673C85A02FD03 /* BoardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5150432D380DCCFA1E40D5 /* BoardTheme.swift */; };
+		A0D2A269AE3A08A386F51FBD /* SharedGameModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA38177BD3F88A62045EBA6B /* SharedGameModel.swift */; };
 		AB74322CCFC1FAC8F8A5ADF8 /* PositionDrama.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B66B176D8E384A1EF9045E /* PositionDrama.swift */; };
 		AFEFD954E01A12B7D561F1A1 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F98D340C5E8763841A93F55E /* SessionStore.swift */; };
 		B46662F23FF4A4F875538184 /* AppearanceMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67A70451A8E22D9E08FFAC74 /* AppearanceMenu.swift */; };
@@ -51,6 +52,7 @@
 		82F931114DDE3CE34ED3F6C1 /* CoachCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachCard.swift; sourceTree = "<group>"; };
 		8EB89AC75819BA7183029F72 /* GameModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameModels.swift; sourceTree = "<group>"; };
 		9B76F79ED090AA55091A141F /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		AA38177BD3F88A62045EBA6B /* SharedGameModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedGameModel.swift; sourceTree = "<group>"; };
 		B7B80D439849C129DA62D6EA /* ComputerDifficulty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputerDifficulty.swift; sourceTree = "<group>"; };
 		C02CC47001BB8CA0952CF358 /* ChessCoachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessCoachApp.swift; sourceTree = "<group>"; };
 		C634E062A3340C1E8B7BDD7B /* MatchArchiveStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchArchiveStore.swift; sourceTree = "<group>"; };
@@ -58,6 +60,7 @@
 		D16258D33AB4B161B64527B6 /* LobbyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LobbyView.swift; sourceTree = "<group>"; };
 		DD5150432D380DCCFA1E40D5 /* BoardTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardTheme.swift; sourceTree = "<group>"; };
 		E028FD7831DF9F7DCA8CD8A2 /* ChessCoach.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChessCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E1EA40C0636A552C61CF56C5 /* ChessCoach.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChessCoach.entitlements; sourceTree = "<group>"; };
 		E675AA1638848608CC8480DC /* GameAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameAPIClient.swift; sourceTree = "<group>"; };
 		E6E4EBFD7219C354DCD21FC4 /* DuoTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoTheme.swift; sourceTree = "<group>"; };
 		F2B66B176D8E384A1EF9045E /* PositionDrama.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PositionDrama.swift; sourceTree = "<group>"; };
@@ -115,6 +118,7 @@
 				54803E0162DC88A139D19F5B /* L10n.swift */,
 				C634E062A3340C1E8B7BDD7B /* MatchArchiveStore.swift */,
 				F2B66B176D8E384A1EF9045E /* PositionDrama.swift */,
+				AA38177BD3F88A62045EBA6B /* SharedGameModel.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -140,6 +144,7 @@
 			isa = PBXGroup;
 			children = (
 				3A39B17C19E09E33A7E27276 /* Assets.xcassets */,
+				E1EA40C0636A552C61CF56C5 /* ChessCoach.entitlements */,
 				4179125235ADD07C7C78E787 /* Info.plist */,
 				27D9D642B31BB2DEE4B7EFB3 /* PrivacyInfo.xcprivacy */,
 				A610B1FE8CFF784020706341 /* App */,
@@ -277,6 +282,7 @@
 				AB74322CCFC1FAC8F8A5ADF8 /* PositionDrama.swift in Sources */,
 				AFEFD954E01A12B7D561F1A1 /* SessionStore.swift in Sources */,
 				DE7E7FBD16FE8F3E656E0AE7 /* SettingsView.swift in Sources */,
+				A0D2A269AE3A08A386F51FBD /* SharedGameModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -353,9 +359,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = ChessCoach/ChessCoach.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = N7LRRN2YGY;
 				INFOPLIST_FILE = ChessCoach/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -363,7 +370,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				OTHER_SWIFT_FLAGS = "$(inherited) -plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins -external-plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins#$(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server";
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikeshobes.chesscoachduo;
 				PRODUCT_NAME = ChessCoach;
@@ -377,9 +384,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_ENTITLEMENTS = ChessCoach/ChessCoach.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = N7LRRN2YGY;
 				INFOPLIST_FILE = ChessCoach/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -387,7 +395,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				OTHER_SWIFT_FLAGS = "$(inherited) -plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins -external-plugin-path $(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins#$(DEVELOPER_DIR)/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server";
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikeshobes.chesscoachduo;
 				PRODUCT_NAME = ChessCoach;
