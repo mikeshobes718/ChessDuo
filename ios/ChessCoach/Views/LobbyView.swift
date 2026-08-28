@@ -1,6 +1,7 @@
 // Lobby home matched to Apple Games profile https://mobbin.com/screens/2745fde2-1edf-488e-8bbc-f5488cd18eeb
 // Forms matched to Paired invite https://mobbin.com/screens/00e77caa-2489-411a-b392-51d307797c19
 // Action rows also follow Twitch Create https://mobbin.com/screens/e08df6c5-4a13-4024-908e-338972288bfc
+// Settings chrome matched to Hinge My Hinge https://mobbin.com/screens/aac6d5c7-d8df-465e-916f-b1259886bd6c
 
 import SwiftUI
 
@@ -91,18 +92,7 @@ struct LobbyView: View {
                         }
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 17, weight: .semibold))
-                            .frame(width: 40, height: 40)
-                            .background(.ultraThinMaterial, in: Circle())
-                            .overlay(Circle().strokeBorder(Color.white.opacity(0.28), lineWidth: 0.6))
-                    }
-                    .accessibilityLabel(L10n.t(.settings))
-                }
+                lobbySettingsToolbarItem
             }
             .toolbarBackground(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingSettings) {
@@ -114,6 +104,37 @@ struct LobbyView: View {
                     .environmentObject(model)
             }
         }
+    }
+
+    @ToolbarContentBuilder
+    private var lobbySettingsToolbarItem: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                lobbySettingsButton
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                lobbySettingsButton
+            }
+        }
+    }
+
+    private var lobbySettingsButton: some View {
+        Button {
+            showingSettings = true
+        } label: {
+            ZStack {
+                Image(systemName: "gearshape")
+                    .symbolRenderingMode(.monochrome)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(DuoAccent.base)
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L10n.t(.settings))
     }
 
     private var header: some View {
