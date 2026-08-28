@@ -11,5 +11,23 @@ struct ContentView: View {
                 GameView()
             }
         }
+#if DEBUG
+        .onAppear(perform: applyVisualPreviewIfNeeded)
+#endif
     }
+
+#if DEBUG
+    private func applyVisualPreviewIfNeeded() {
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-previewWaiting") {
+            model.loadVisualPreview("waiting")
+        } else if args.contains("-previewPlaying") {
+            model.loadVisualPreview("playing")
+        } else if args.contains("-previewReview") {
+            model.loadVisualPreview("review")
+        } else if args.contains("-previewPromotion") {
+            model.loadVisualPreview("promotion")
+        }
+    }
+#endif
 }

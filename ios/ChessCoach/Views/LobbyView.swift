@@ -1,3 +1,7 @@
+// Lobby home matched to Apple Games profile https://mobbin.com/screens/2745fde2-1edf-488e-8bbc-f5488cd18eeb
+// Forms matched to Paired invite https://mobbin.com/screens/00e77caa-2489-411a-b392-51d307797c19
+// Action rows also follow Twitch Create https://mobbin.com/screens/e08df6c5-4a13-4024-908e-338972288bfc
+
 import SwiftUI
 
 private enum LobbyStep: Equatable {
@@ -20,12 +24,13 @@ struct LobbyView: View {
 
                 VStack(spacing: 0) {
                     ScrollView {
-                        VStack(spacing: 26) {
+                        VStack(spacing: 28) {
                             header
                             content
                         }
-                        .padding(.horizontal, 18)
+                        .padding(.horizontal, DuoSpace.screen)
                         .padding(.bottom, 28)
+                        .duoReadableWidth()
                     }
 
                     if step == .home {
@@ -33,23 +38,23 @@ struct LobbyView: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 14)
+                            .padding(.horizontal, 28)
+                            .padding(.bottom, 16)
                     }
                 }
             }
-            .onAppear(perform: consumeDeepLink)
+            .onAppear {
+                consumeDeepLink()
+#if DEBUG
+                applyVisualPreviewIfNeeded()
+#endif
+            }
             .onChange(of: model.roomCodeInput) { _ in
                 consumeDeepLink()
             }
             .overlay(alignment: .top) {
                 if let toast = model.toastMessage {
-                    Text(toast)
-                        .font(.footnote.weight(.semibold))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(.thinMaterial, in: Capsule())
-                        .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
+                    DuoToastBanner(text: toast)
                         .padding(.top, 8)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -59,9 +64,7 @@ struct LobbyView: View {
                 if model.isLoading {
                     ZStack {
                         Color.black.opacity(0.18).ignoresSafeArea()
-                        ProgressView(step == .start ? L10n.t(.creatingRoom) : L10n.t(.connecting))
-                            .padding(20)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        DuoLoadingCard(text: step == .start ? L10n.t(.creatingRoom) : L10n.t(.connecting))
                     }
                 }
             }
@@ -93,9 +96,10 @@ struct LobbyView: View {
                         showingSettings = true
                     } label: {
                         Image(systemName: "gearshape")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 17, weight: .semibold))
                             .frame(width: 40, height: 40)
-                            .background(.regularMaterial, in: Circle())
+                            .background(.ultraThinMaterial, in: Circle())
+                            .overlay(Circle().strokeBorder(Color.white.opacity(0.28), lineWidth: 0.6))
                     }
                     .accessibilityLabel(L10n.t(.settings))
                 }
@@ -113,26 +117,27 @@ struct LobbyView: View {
     }
 
     private var header: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(DuoAccent.gradient)
-                    .frame(width: 86, height: 86)
-                    .shadow(color: DuoAccent.base.opacity(0.4), radius: 22, y: 12)
+                    .frame(width: 88, height: 88)
+                    .shadow(color: DuoAccent.base.opacity(0.36), radius: 20, y: 10)
                 Image(systemName: "crown.fill")
-                    .font(.system(size: 38, weight: .bold))
+                    .font(.system(size: 36, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .padding(.top, 30)
+            .padding(.top, 28)
 
             Text(L10n.t(.appName))
                 .font(.system(size: 34, weight: .bold, design: .rounded))
+                .foregroundStyle(DuoAccent.ink)
 
             Text(subtitle)
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 8)
         }
         .frame(maxWidth: .infinity)
     }
@@ -157,7 +162,7 @@ struct LobbyView: View {
     }
 
     private var homeChoices: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             choiceCard(
                 title: L10n.t(.startNewGame),
                 detail: L10n.t(.startNewGameDetail),
@@ -186,22 +191,20 @@ struct LobbyView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 10)
             }
             .buttonStyle(.plain)
-            .padding(.top, 2)
+            .padding(.top, 4)
         }
     }
 
     private var startForm: some View {
-        DuoFormCard {
+        DuoFormCard(wash: DuoAccent.lavenderWash) {
             stepLabel(L10n.t(.step1of2))
             Text(L10n.t(.whatsYourName))
                 .font(.title3.bold())
+                .foregroundStyle(DuoAccent.ink)
             DuoTextField(placeholder: L10n.t(.yourName), text: $model.playerName, contentType: .name)
-            Text(L10n.t(.lobbySubtitleStart))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
 
             Button {
                 Task { await model.createGame() }
@@ -215,16 +218,18 @@ struct LobbyView: View {
     }
 
     private var joinForm: some View {
-        DuoFormCard {
+        DuoFormCard(wash: DuoAccent.coralWash) {
             stepLabel(L10n.t(.joinWithCode))
             Text(L10n.t(.whatsYourName))
                 .font(.title3.bold())
+                .foregroundStyle(DuoAccent.ink)
             DuoTextField(placeholder: L10n.t(.yourName), text: $model.playerName, contentType: .name)
 
             Text(L10n.t(.roomCode))
                 .font(.title3.bold())
-                .padding(.top, 6)
-            DuoTextField(placeholder: "AB12CD", text: $model.roomCodeInput, uppercase: true, mono: true)
+                .foregroundStyle(DuoAccent.ink)
+                .padding(.top, 4)
+            DuoCodeField(text: $model.roomCodeInput)
             Text(L10n.t(.askPartnerCode))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -245,11 +250,12 @@ struct LobbyView: View {
     }
 
     private var watchForm: some View {
-        DuoFormCard {
+        DuoFormCard(wash: DuoAccent.lavenderWash) {
             stepLabel(L10n.t(.watchGame))
             Text(L10n.t(.roomCode))
                 .font(.title3.bold())
-            DuoTextField(placeholder: "AB12CD", text: $model.roomCodeInput, uppercase: true, mono: true)
+                .foregroundStyle(DuoAccent.ink)
+            DuoCodeField(text: $model.roomCodeInput)
 
             Button {
                 Task { await model.spectateGame() }
@@ -271,32 +277,20 @@ struct LobbyView: View {
     ) -> some View {
         Button(action: action) {
             HStack(alignment: .center, spacing: 14) {
-                ZStack {
-                    if prominent {
-                        Circle()
-                            .fill(Color.white.opacity(0.22))
-                    } else {
-                        Circle()
-                            .fill(DuoAccent.base.opacity(0.12))
-                    }
-                    Image(systemName: systemImage)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(prominent ? Color.white : DuoAccent.base)
-                }
-                .frame(width: 46, height: 46)
+                DuoIconCircle(systemImage: systemImage, size: 48, prominent: prominent)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline)
                     Text(detail)
                         .font(.subheadline)
-                        .foregroundStyle(prominent ? Color.white.opacity(0.92) : Color.secondary)
+                        .foregroundStyle(prominent ? Color.white.opacity(0.90) : Color.secondary)
                         .multilineTextAlignment(.leading)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .font(.body.weight(.bold))
-                    .foregroundStyle(prominent ? Color.white.opacity(0.9) : Color.secondary.opacity(0.7))
+                    .foregroundStyle(prominent ? Color.white.opacity(0.86) : Color.secondary.opacity(0.65))
             }
             .foregroundStyle(prominent ? Color.white : Color.primary)
             .padding(16)
@@ -307,28 +301,52 @@ struct LobbyView: View {
     }
 
     private func consumeDeepLink() {
-        guard let code = model.consumePendingDeepLink() else { return }
+        guard model.consumePendingDeepLink() != nil else { return }
         step = .join
     }
+
+#if DEBUG
+    private func applyVisualPreviewIfNeeded() {
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-previewStart") { step = .start }
+        if args.contains("-previewJoin") { step = .join }
+        if args.contains("-previewWatch") { step = .watch }
+        if args.contains("-previewSettings") { showingSettings = true }
+        if args.contains("-previewPast") { showingPastGames = true }
+    }
+#endif
 
     private func stepLabel(_ text: String) -> some View {
         Text(text.uppercased())
             .font(.caption.weight(.bold))
             .foregroundStyle(DuoAccent.base)
-            .tracking(1.2)
+            .tracking(1.1)
     }
 }
 
 private struct DuoFormCard<Content: View>: View {
+    var wash: Color? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             content
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .duoCard()
+        .modifier(FormCardBackground(wash: wash))
+    }
+}
+
+private struct FormCardBackground: ViewModifier {
+    let wash: Color?
+
+    func body(content: Content) -> some View {
+        if let wash {
+            content.duoTintedCard(wash: wash)
+        } else {
+            content.duoCard()
+        }
     }
 }
 
@@ -348,9 +366,9 @@ private struct DuoTextField: View {
             .font(mono ? .system(.title3, design: .monospaced).weight(.semibold) : .body.weight(.medium))
             .padding(.horizontal, 14)
             .frame(minHeight: 54)
-            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: DuoRadius.field, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: DuoRadius.field, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             )
             .onChange(of: text) { value in
@@ -358,5 +376,35 @@ private struct DuoTextField: View {
                 let cleaned = value.uppercased().filter { $0.isLetter || $0.isNumber }
                 if cleaned != value { text = cleaned }
             }
+    }
+}
+
+private struct DuoCodeField: View {
+    @Binding var text: String
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        ZStack {
+            TextField("", text: $text)
+                .focused($focused)
+                .keyboardType(.asciiCapable)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .submitLabel(.go)
+                .opacity(0.02)
+                .frame(height: 52)
+                .onChange(of: text) { value in
+                    let cleaned = value.uppercased().filter { $0.isLetter || $0.isNumber }
+                    if cleaned != value { text = cleaned }
+                }
+            DuoCodeBoxes(code: text)
+                .allowsHitTesting(false)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { focused = true }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L10n.t(.roomCode))
+        .accessibilityValue(text)
+        .accessibilityAddTraits(.isSearchField)
     }
 }

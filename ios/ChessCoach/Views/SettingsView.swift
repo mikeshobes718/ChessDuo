@@ -1,3 +1,6 @@
+// Settings matched to Hinge settings https://mobbin.com/screens/fd70e2d2-81d3-4808-8d4b-efc87e0e6662
+// Card grouping also follows Bumble settings https://mobbin.com/screens/fe8df009-b4b9-4349-9e8b-dc8ec89974e5
+
 import SwiftUI
 
 struct SettingsView: View {
@@ -31,7 +34,7 @@ struct SettingsView: View {
                             )
                         }
                     } header: {
-                        Text(L10n.t(.languageSection))
+                        Text(L10n.t(.languageSection).uppercased())
                     } footer: {
                         Text(L10n.t(.languageFooter))
                     }
@@ -86,12 +89,12 @@ struct SettingsView: View {
                             .pickerStyle(.segmented)
                         }
                     } header: {
-                        Text(L10n.t(.assists))
+                        Text(L10n.t(.assists).uppercased())
                     } footer: {
                         Text(L10n.t(.assistsFooter))
                     }
 
-                    Section(L10n.t(.lookAndBoard)) {
+                    Section {
                         Picker(L10n.t(.appAppearance), selection: $appearanceMode) {
                             ForEach(AppearanceMode.allCases, id: \.rawValue) { mode in
                                 Text(mode.title).tag(mode.rawValue)
@@ -108,25 +111,34 @@ struct SettingsView: View {
                             boardTheme = BoardTheme.custom.rawValue
                             showingBoardColors = true
                         }
+                    } header: {
+                        Text(L10n.t(.lookAndBoard).uppercased())
                     }
 
-                    Section(L10n.t(.feedback)) {
+                    Section {
                         Toggle(L10n.t(.haptics), isOn: $hapticsEnabled)
                         Toggle(L10n.t(.sounds), isOn: $soundsEnabled)
+                    } header: {
+                        Text(L10n.t(.feedback).uppercased())
                     }
 
-                    Section(L10n.t(.help)) {
+                    Section {
                         Button(L10n.t(.pieceGuide)) {
                             showingPieceGuide = true
                         }
+                    } header: {
+                        Text(L10n.t(.help).uppercased())
                     }
 
-                    Section(L10n.t(.about)) {
+                    Section {
                         LabeledContent(L10n.t(.appName), value: "Chess Duo")
                         LabeledContent(L10n.t(.versionLabel), value: GameAPIClient.clientVersion)
+                    } header: {
+                        Text(L10n.t(.about).uppercased())
                     }
                 }
                 .scrollContentBackground(.hidden)
+                .tint(DuoAccent.base)
             }
             .navigationTitle(L10n.t(.settings))
             .navigationBarTitleDisplayMode(.large)
@@ -134,6 +146,7 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t(.done)) { dismiss() }
+                        .fontWeight(.semibold)
                 }
             }
             .sheet(isPresented: $showingBoardColors) {
@@ -142,6 +155,13 @@ struct SettingsView: View {
             .sheet(isPresented: $showingPieceGuide) {
                 PieceLegendSheet()
             }
+#if DEBUG
+            .onAppear {
+                let args = ProcessInfo.processInfo.arguments
+                if args.contains("-previewGuide") { showingPieceGuide = true }
+                if args.contains("-previewBoardColors") { showingBoardColors = true }
+            }
+#endif
         }
     }
 
@@ -154,6 +174,6 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
     }
 }

@@ -47,6 +47,9 @@ final class GameViewModel: ObservableObject {
     private var answeredQuizForVersion: Int?
     private var promotionContext: (from: String, to: String)?
     private var pendingDeepLinkCode: String?
+#if DEBUG
+    private var visualPreviewActive = false
+#endif
 
     init(api: GameAPIClient = GameAPIClient(), store: SessionStore = SessionStore()) {
         self.api = api
@@ -530,6 +533,9 @@ final class GameViewModel: ObservableObject {
     }
 
     func startPolling() {
+#if DEBUG
+        if visualPreviewActive { return }
+#endif
         guard session != nil, pollingTask == nil else { return }
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -894,4 +900,63 @@ final class GameViewModel: ObservableObject {
         default: return L10n.t(.pieceHelpPawn)
         }
     }
+
+#if DEBUG
+    func loadVisualPreview(_ kind: String) {
+        visualPreviewActive = true
+        stopPolling()
+        switch kind {
+        case "waiting":
+            session = PlayerSession(roomCode: "AB12CD", playerToken: "preview", color: .white, playerName: "Mike")
+            var next = GameState()
+            next.roomCode = "AB12CD"
+            next.status = "waiting"
+            next.whiteName = "Mike"
+            game = next
+        case "playing":
+            session = PlayerSession(roomCode: "AB12CD", playerToken: "preview", color: .white, playerName: "Mike")
+            var next = GameState()
+            next.roomCode = "AB12CD"
+            next.status = "active"
+            next.whiteName = "Mike"
+            next.blackName = "Liana"
+            next.turn = .white
+            next.coachMessage = "Look for checks, captures, and threats before every move."
+            next.coachSource = "ai"
+            next.legalMoves = [
+                LegalMove(from: "e2", to: "e4"),
+                LegalMove(from: "e2", to: "e3"),
+                LegalMove(from: "g1", to: "f3")
+            ]
+            game = next
+            moveGuideEnabled = true
+            coachCollapsed = false
+            hintsEnabled = true
+            playForMeEnabled = true
+        case "promotion":
+            loadVisualPreview("playing")
+            pendingPromotion = PendingPromotion(from: "e7", to: "e8")
+        case "review":
+            session = PlayerSession(roomCode: "AB12CD", playerToken: "preview", color: .white, playerName: "Mike")
+            var next = GameState()
+            next.roomCode = "AB12CD"
+            next.status = "finished"
+            next.result = "Mike wins"
+            next.whiteName = "Mike"
+            next.blackName = "Liana"
+            next.review = MatchReview(
+                white: PlayerReview(name: "Mike", accuracy: 88, unaidedAccuracy: 84, moveCount: 12, assistedCount: 1),
+                black: PlayerReview(name: "Liana", accuracy: 74, unaidedAccuracy: 74, moveCount: 11, assistedCount: 0),
+                moves: [
+                    MoveReviewEntry(from: "e2", to: "e4", san: "e4", by: "white", assisted: false, precision: 92, label: "Played"),
+                    MoveReviewEntry(from: "e7", to: "e5", san: "e5", by: "black", assisted: false, precision: 80, label: "Played")
+                ]
+            )
+            game = next
+            showMatchReview = true
+        default:
+            break
+        }
+    }
+#endif
 }

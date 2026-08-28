@@ -1,3 +1,5 @@
+// Piece guide matched to Duolingo Chess coach cards https://mobbin.com/screens/82e91d14-d239-4007-afc3-57dc0be96bde
+
 import SwiftUI
 
 struct PieceLegendSheet: View {
@@ -72,7 +74,8 @@ struct PieceLegendSheet: View {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(L10n.t(.pieceGuideTitle))
-                            .font(.title.bold())
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .foregroundStyle(DuoAccent.ink)
                         Text(L10n.t(.pieceGuideSubtitle))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -83,12 +86,15 @@ struct PieceLegendSheet: View {
                             HStack(spacing: 12) {
                                 Text(card.glyph)
                                     .font(.system(size: 34))
-                                    .frame(width: 44)
+                                    .frame(width: 48, height: 48)
+                                    .background(DuoAccent.lavenderWash, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(card.title)
                                         .font(.headline)
+                                        .foregroundStyle(DuoAccent.ink)
                                     Text(card.summary)
                                         .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(DuoAccent.base)
                                 }
                             }
 
@@ -100,12 +106,12 @@ struct PieceLegendSheet: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        .padding(14)
+                        .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .duoCard(radius: 20)
+                        .duoCard(radius: 22)
                     }
                 }
-                .padding()
+                .padding(DuoSpace.screen)
                 }
                 .scrollContentBackground(.hidden)
             }

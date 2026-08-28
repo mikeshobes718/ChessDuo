@@ -1,12 +1,22 @@
 import SwiftUI
+import UIKit
 
 enum DuoAccent {
-    static let base = Color(red: 0.42, green: 0.31, blue: 0.95)
-    static let glow = Color(red: 0.35, green: 0.75, blue: 0.85)
+    static let base = Color(red: 0.36, green: 0.18, blue: 0.55)
+    static let glow = Color(red: 0.78, green: 0.38, blue: 0.48)
+    static let rose = Color(red: 0.86, green: 0.42, blue: 0.48)
+    static let cream = Color(red: 0.99, green: 0.97, blue: 0.94)
+    static let lavenderWash = Color(red: 0.93, green: 0.89, blue: 0.98)
+    static let coralWash = Color(red: 0.98, green: 0.90, blue: 0.90)
+    static let ink = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.96, green: 0.94, blue: 0.98, alpha: 1)
+            : UIColor(red: 0.14, green: 0.10, blue: 0.20, alpha: 1)
+    })
 
     static var gradient: LinearGradient {
         LinearGradient(
-            colors: [base, glow],
+            colors: [base, Color(red: 0.48, green: 0.24, blue: 0.68)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -14,17 +24,33 @@ enum DuoAccent {
 
     static var horizontalGradient: LinearGradient {
         LinearGradient(
-            colors: [base, Color(red: 0.20, green: 0.55, blue: 0.90), glow],
+            colors: [base, Color(red: 0.52, green: 0.28, blue: 0.70), glow],
             startPoint: .leading,
             endPoint: .trailing
         )
     }
 }
 
+enum DuoSpace {
+    static let screen: CGFloat = 20
+    static let card: CGFloat = 16
+    static let stack: CGFloat = 14
+    static let row: CGFloat = 12
+    static let tight: CGFloat = 8
+}
+
+enum DuoRadius {
+    static let sheet: CGFloat = 28
+    static let card: CGFloat = 22
+    static let tile: CGFloat = 16
+    static let field: CGFloat = 14
+    static let pill: CGFloat = 28
+}
+
 enum DuoGlass {
     static var hairline: LinearGradient {
         LinearGradient(
-            colors: [Color.white.opacity(0.55), Color.white.opacity(0.10)],
+            colors: [Color.white.opacity(0.62), Color.white.opacity(0.12)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -32,7 +58,7 @@ enum DuoGlass {
 
     static var hairlineDark: LinearGradient {
         LinearGradient(
-            colors: [Color.white.opacity(0.22), Color.white.opacity(0.06)],
+            colors: [Color.white.opacity(0.24), Color.white.opacity(0.06)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -44,8 +70,12 @@ enum DuoGlass {
 }
 
 extension View {
-    func duoCard(prominent: Bool = false, radius: CGFloat = 24) -> some View {
-        modifier(DuoCardModifier(prominent: prominent, radius: radius))
+    func duoCard(prominent: Bool = false, radius: CGFloat = DuoRadius.card) -> some View {
+        modifier(DuoCardModifier(prominent: prominent, radius: radius, wash: nil))
+    }
+
+    func duoTintedCard(wash: Color, radius: CGFloat = DuoRadius.card) -> some View {
+        modifier(DuoCardModifier(prominent: false, radius: radius, wash: wash))
     }
 
     func duoPrimaryButton() -> some View {
@@ -55,11 +85,17 @@ extension View {
     func duoSecondaryButton() -> some View {
         modifier(DuoSecondaryButtonStyle())
     }
+
+    func duoReadableWidth(_ width: CGFloat = 560) -> some View {
+        frame(maxWidth: width)
+            .frame(maxWidth: .infinity)
+    }
 }
 
 private struct DuoCardModifier: ViewModifier {
     let prominent: Bool
     let radius: CGFloat
+    let wash: Color?
     @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
@@ -72,18 +108,25 @@ private struct DuoCardModifier: ViewModifier {
                             RoundedRectangle(cornerRadius: radius, style: .continuous)
                                 .fill(
                                     LinearGradient(
-                                        colors: [Color.white.opacity(0.26), Color.white.opacity(0)],
+                                        colors: [Color.white.opacity(0.24), Color.white.opacity(0)],
                                         startPoint: .top,
                                         endPoint: .center
                                     )
                                 )
+                        }
+                } else if let wash {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(wash.opacity(scheme == .dark ? 0.28 : 1))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                .fill(.ultraThinMaterial.opacity(scheme == .dark ? 0.55 : 0.18))
                         }
                 } else {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
                         .fill(.ultraThinMaterial)
                         .overlay {
                             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                                .fill(Color.white.opacity(scheme == .dark ? 0.03 : 0.28))
+                                .fill(DuoAccent.cream.opacity(scheme == .dark ? 0.04 : 0.55))
                         }
                 }
             }
@@ -95,9 +138,11 @@ private struct DuoCardModifier: ViewModifier {
                     )
             }
             .shadow(
-                color: prominent ? DuoAccent.base.opacity(0.42) : Color.black.opacity(scheme == .dark ? 0.35 : 0.08),
-                radius: prominent ? 22 : 14,
-                y: prominent ? 12 : 6
+                color: prominent
+                    ? DuoAccent.base.opacity(0.36)
+                    : Color.black.opacity(scheme == .dark ? 0.32 : 0.07),
+                radius: prominent ? 20 : 12,
+                y: prominent ? 10 : 5
             )
     }
 }
@@ -111,21 +156,21 @@ private struct DuoPrimaryButtonStyle: ViewModifier {
             .frame(maxWidth: .infinity, minHeight: 54)
             .foregroundStyle(.white)
             .background {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                Capsule(style: .continuous)
                     .fill(
                         isEnabled
                             ? DuoAccent.gradient
                             : LinearGradient(
-                                colors: [DuoAccent.base.opacity(0.45), DuoAccent.glow.opacity(0.45)],
+                                colors: [DuoAccent.base.opacity(0.40), DuoAccent.base.opacity(0.28)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                     )
                     .overlay {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        Capsule(style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.30), Color.white.opacity(0)],
+                                    colors: [Color.white.opacity(0.26), Color.white.opacity(0)],
                                     startPoint: .top,
                                     endPoint: .center
                                 )
@@ -133,11 +178,11 @@ private struct DuoPrimaryButtonStyle: ViewModifier {
                     }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.38), lineWidth: 0.8)
+                Capsule(style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.34), lineWidth: 0.8)
             }
-            .shadow(color: DuoAccent.base.opacity(isEnabled ? 0.40 : 0.12), radius: 16, y: 8)
-            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(color: DuoAccent.base.opacity(isEnabled ? 0.34 : 0.10), radius: 14, y: 7)
+            .contentShape(Capsule(style: .continuous))
     }
 }
 
@@ -149,21 +194,21 @@ private struct DuoSecondaryButtonStyle: ViewModifier {
         content
             .font(.body.weight(.semibold))
             .frame(maxWidth: .infinity, minHeight: 50)
-            .foregroundStyle(DuoAccent.base.opacity(isEnabled ? 1 : 0.5))
+            .foregroundStyle(DuoAccent.base.opacity(isEnabled ? 1 : 0.45))
             .background {
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                Capsule(style: .continuous)
                     .fill(.ultraThinMaterial)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 17, style: .continuous)
-                            .fill(Color.white.opacity(scheme == .dark ? 0.02 : 0.22))
+                        Capsule(style: .continuous)
+                            .fill(Color.white.opacity(scheme == .dark ? 0.04 : 0.46))
                     }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                Capsule(style: .continuous)
                     .strokeBorder(DuoGlass.hairlineStroke(scheme: scheme), lineWidth: 0.8)
             }
-            .shadow(color: Color.black.opacity(scheme == .dark ? 0.28 : 0.05), radius: 10, y: 4)
-            .contentShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .shadow(color: Color.black.opacity(scheme == .dark ? 0.24 : 0.04), radius: 8, y: 3)
+            .contentShape(Capsule(style: .continuous))
     }
 }
 
@@ -178,7 +223,7 @@ struct DuoChip: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(tint.opacity(0.14), in: Capsule())
-            .overlay(Capsule().strokeBorder(tint.opacity(0.25), lineWidth: 0.6))
+            .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 0.6))
     }
 }
 
@@ -187,22 +232,25 @@ struct DuoBackground: View {
 
     var body: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            (scheme == .dark
+                ? Color(red: 0.10, green: 0.08, blue: 0.14)
+                : DuoAccent.cream)
+                .ignoresSafeArea()
             Circle()
-                .fill(DuoAccent.base.opacity(scheme == .dark ? 0.22 : 0.16))
-                .frame(width: 340, height: 340)
-                .blur(radius: 70)
-                .offset(x: -140, y: -230)
+                .fill(DuoAccent.base.opacity(scheme == .dark ? 0.34 : 0.16))
+                .frame(width: 360, height: 360)
+                .blur(radius: 78)
+                .offset(x: -150, y: -240)
             Circle()
-                .fill(DuoAccent.glow.opacity(scheme == .dark ? 0.18 : 0.13))
+                .fill(DuoAccent.rose.opacity(scheme == .dark ? 0.18 : 0.12))
                 .frame(width: 300, height: 300)
-                .blur(radius: 80)
-                .offset(x: 160, y: -190)
+                .blur(radius: 86)
+                .offset(x: 170, y: -170)
             Circle()
-                .fill(Color(red: 0.95, green: 0.45, blue: 0.65).opacity(scheme == .dark ? 0.10 : 0.07))
-                .frame(width: 260, height: 260)
-                .blur(radius: 90)
-                .offset(x: 120, y: 320)
+                .fill(DuoAccent.lavenderWash.opacity(scheme == .dark ? 0.12 : 0.55))
+                .frame(width: 280, height: 280)
+                .blur(radius: 70)
+                .offset(x: 40, y: 340)
         }
     }
 }
@@ -215,6 +263,7 @@ struct DuoSectionHeader: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.title3.weight(.bold))
+                .foregroundStyle(DuoAccent.ink)
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.subheadline)
@@ -230,9 +279,10 @@ struct DuoSheetTitle: View {
     var subtitle: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(DuoAccent.ink)
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.subheadline)
@@ -240,8 +290,107 @@ struct DuoSheetTitle: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, DuoSpace.screen)
         .padding(.top, 10)
+    }
+}
+
+struct DuoIconCircle: View {
+    let systemImage: String
+    var size: CGFloat = 46
+    var prominent = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(prominent ? Color.white.opacity(0.22) : DuoAccent.base.opacity(0.12))
+            Image(systemName: systemImage)
+                .font(.system(size: size * 0.42, weight: .bold))
+                .foregroundStyle(prominent ? Color.white : DuoAccent.base)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+struct DuoEmptyState: View {
+    let systemImage: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(DuoAccent.base.opacity(0.12))
+                    .frame(width: 72, height: 72)
+                Image(systemName: systemImage)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(DuoAccent.base)
+            }
+            Text(title)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(DuoAccent.ink)
+            Text(detail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DuoSpace.screen)
+    }
+}
+
+struct DuoCodeBoxes: View {
+    let code: String
+    var boxCount: Int = 6
+
+    private var characters: [String] {
+        let cleaned = Array(code.uppercased().filter { $0.isLetter || $0.isNumber }.prefix(boxCount))
+        return (0..<boxCount).map { index in
+            index < cleaned.count ? String(cleaned[index]) : ""
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(characters.enumerated()), id: \.offset) { _, glyph in
+                Text(glyph.isEmpty ? " " : glyph)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(DuoAccent.ink)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    )
+            }
+        }
+        .accessibilityLabel("Room code \(code)")
+    }
+}
+
+struct DuoToastBanner: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.footnote.weight(.semibold))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.thinMaterial, in: Capsule())
+            .overlay(Capsule().stroke(Color.primary.opacity(0.08)))
+    }
+}
+
+struct DuoLoadingCard: View {
+    let text: String
+
+    var body: some View {
+        ProgressView(text)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 18)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: DuoRadius.tile, style: .continuous))
     }
 }
 

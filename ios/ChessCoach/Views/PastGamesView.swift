@@ -1,3 +1,6 @@
+// Empty state matched to Apple Games Challenges https://mobbin.com/screens/0cfb504e-116d-4fbf-b0f3-b4c7ebf76aa9
+// Match rows also follow Hinge Matches https://mobbin.com/screens/578eeee4-7fa6-4821-a55e-5d3bd53c93ef
+
 import SwiftUI
 
 struct PastGamesView: View {
@@ -13,22 +16,15 @@ struct PastGamesView: View {
 
                 Group {
                     if matches.isEmpty {
-                        VStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(DuoAccent.base.opacity(0.12))
-                                    .frame(width: 78, height: 78)
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.system(size: 30, weight: .bold))
-                                    .foregroundStyle(DuoAccent.base)
-                            }
-                            Text(L10n.t(.pastGamesEmpty))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 24)
+                        VStack(alignment: .leading, spacing: 0) {
+                            DuoEmptyState(
+                                systemImage: "clock.arrow.circlepath",
+                                title: L10n.t(.pastGamesEmpty),
+                                detail: L10n.t(.pastGamesDetail)
+                            )
+                            Spacer()
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 28)
                     } else {
                         ScrollView {
                             VStack(spacing: 12) {
@@ -36,37 +32,41 @@ struct PastGamesView: View {
                                     Button {
                                         selected = match
                                     } label: {
-                                        VStack(alignment: .leading, spacing: 8) {
-                                            HStack {
-                                                Text("\(match.whiteName) vs \(match.blackName)")
-                                                    .font(.headline)
+                                        VStack(alignment: .leading, spacing: 10) {
+                                            HStack(alignment: .center, spacing: 12) {
+                                                DuoIconCircle(systemImage: "crown.fill", size: 44)
+                                                VStack(alignment: .leading, spacing: 3) {
+                                                    Text("\(match.whiteName) vs \(match.blackName)")
+                                                        .font(.headline)
+                                                        .foregroundStyle(DuoAccent.ink)
+                                                    Text(L10n.t(.roomPrefix, match.roomCode))
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                }
                                                 Spacer()
                                                 DuoChip(text: match.resultText, tint: DuoAccent.base)
                                             }
                                             HStack {
-                                                Text(L10n.t(.roomPrefix, match.roomCode))
-                                                Spacer()
                                                 Text(match.endedAt, style: .date)
+                                                Spacer()
+                                                if let white = match.review.white?.accuracy,
+                                                   let black = match.review.black?.accuracy {
+                                                    Text("\(white)%  \(black)%")
+                                                        .font(.caption.weight(.semibold))
+                                                }
                                             }
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
-                                            if let white = match.review.white?.accuracy,
-                                               let black = match.review.black?.accuracy {
-                                                HStack(spacing: 8) {
-                                                    DuoChip(text: "\(match.whiteName) \(white)%", tint: .green)
-                                                    DuoChip(text: "\(match.blackName) \(black)%", tint: .blue)
-                                                }
-                                            }
                                         }
-                                        .padding(14)
+                                        .padding(16)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                     .duoCard()
                                     .buttonStyle(.plain)
                                 }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
+                            .padding(.horizontal, DuoSpace.screen)
+                            .padding(.vertical, 16)
                         }
                     }
                 }
@@ -77,6 +77,7 @@ struct PastGamesView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t(.done)) { dismiss() }
+                        .fontWeight(.semibold)
                 }
             }
             .task {

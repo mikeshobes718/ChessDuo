@@ -1,3 +1,5 @@
+// Board chrome matched to Duolingo Chess https://mobbin.com/screens/0c9656e8-e6f0-4372-bf78-6e0cbe3e3c9d
+
 import SwiftUI
 
 struct ChessBoardView: View {
@@ -80,10 +82,10 @@ struct ChessBoardView: View {
                         }
                     }
                     .frame(width: squareSize * 8, height: squareSize * 8)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                     }
                     .offset(x: shakeOffset)
                     .onChange(of: fen) { newFen in
@@ -121,8 +123,8 @@ struct ChessBoardView: View {
         HStack(spacing: 0) {
             ForEach(files, id: \.self) { file in
                 Text(String(file))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
                     .frame(width: squareSize, height: labelHeight)
             }
         }
@@ -132,8 +134,8 @@ struct ChessBoardView: View {
         VStack(spacing: 0) {
             ForEach(ranks, id: \.self) { rank in
                 Text("\(rank)")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
                     .frame(width: labelWidth, height: squareSize)
             }
         }

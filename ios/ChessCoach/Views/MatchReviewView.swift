@@ -1,3 +1,6 @@
+// Match review matched to Paired results https://mobbin.com/screens/bc0f0c0f-d7e6-4833-b143-b45032f3693f
+// Stats grid also follows Quizlet results https://mobbin.com/screens/914f0481-4918-4b49-a99c-122998a9774d
+
 import SwiftUI
 
 struct MatchReviewView: View {
@@ -15,8 +18,8 @@ struct MatchReviewView: View {
                     VStack(spacing: 18) {
                         hero
                         HStack(spacing: 12) {
-                            accuracyCard(review.white)
-                            accuracyCard(review.black)
+                            accuracyCard(review.white, wash: DuoAccent.lavenderWash, tint: DuoAccent.base)
+                            accuracyCard(review.black, wash: DuoAccent.coralWash, tint: DuoAccent.rose)
                         }
                         movesSection
                         if let onRematch {
@@ -31,8 +34,9 @@ struct MatchReviewView: View {
                             .padding(.top, 4)
                         }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, DuoSpace.screen)
                     .padding(.vertical, 18)
+                    .duoReadableWidth()
                 }
             }
             .navigationTitle(L10n.t(.matchReview))
@@ -41,6 +45,7 @@ struct MatchReviewView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t(.done)) { dismiss() }
+                        .fontWeight(.semibold)
                 }
             }
         }
@@ -48,20 +53,12 @@ struct MatchReviewView: View {
 
     private var hero: some View {
         VStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(DuoAccent.gradient)
-                    .frame(width: 74, height: 74)
-                    .shadow(color: DuoAccent.base.opacity(0.35), radius: 18, y: 10)
-                Image(systemName: "chart.bar.fill")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-            Text(L10n.t(.reviewTitle))
-                .font(.system(size: 24, weight: .bold, design: .rounded))
             Text(resultText)
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 8)
+                .background(DuoAccent.gradient, in: Capsule())
             Text(L10n.t(.reviewExplainer))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -69,7 +66,7 @@ struct MatchReviewView: View {
                 .padding(.horizontal, 8)
         }
         .frame(maxWidth: .infinity)
-        .padding(18)
+        .padding(20)
         .duoCard()
     }
 
@@ -100,7 +97,7 @@ struct MatchReviewView: View {
                                 .font(.headline.monospacedDigit())
                                 .foregroundStyle(color(for: precision))
                         }
-                        .padding(12)
+                        .padding(14)
                         .duoCard(radius: 16)
                     }
                 }
@@ -114,7 +111,7 @@ struct MatchReviewView: View {
     }
 
     @ViewBuilder
-    private func accuracyCard(_ player: PlayerReview?) -> some View {
+    private func accuracyCard(_ player: PlayerReview?, wash: Color, tint: Color) -> some View {
         let accuracy = player?.accuracy ?? 0
         VStack(spacing: 8) {
             Text(player?.name ?? "Player")
@@ -135,13 +132,19 @@ struct MatchReviewView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(14)
-        .duoCard(radius: 18)
+        .padding(16)
+        .duoTintedCard(wash: wash, radius: 20)
+        .overlay(alignment: .top) {
+            Capsule()
+                .fill(tint)
+                .frame(width: 36, height: 4)
+                .padding(.top, 8)
+        }
     }
 
     private func moveLine(_ move: MoveReviewEntry) -> String {
         let who = (move.by ?? "").capitalized
-        let path = "\((move.from ?? "").uppercased()) → \((move.to ?? "").uppercased())"
+        let path = "\((move.from ?? "").uppercased()) to \((move.to ?? "").uppercased())"
         let san = move.san.map { " (\($0))" } ?? ""
         return "\(who) \(path)\(san)"
     }
@@ -156,7 +159,7 @@ struct MatchReviewView: View {
 
     private func color(for precision: Int) -> Color {
         if precision >= 85 { return .green }
-        if precision >= 70 { return .blue }
+        if precision >= 70 { return DuoAccent.base }
         if precision >= 55 { return .orange }
         return .red
     }

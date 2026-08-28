@@ -1,3 +1,5 @@
+// Board colors matched to Hinge settings https://mobbin.com/screens/fd70e2d2-81d3-4808-8d4b-efc87e0e6662
+
 import SwiftUI
 import UIKit
 
@@ -36,49 +38,55 @@ struct BoardColorSettingsSheet: View {
         NavigationStack {
             ZStack {
                 DuoBackground()
-            Form {
-                Section("Presets") {
-                    ForEach(BoardTheme.allCases.filter { $0 != .custom }) { theme in
-                        Button {
-                            boardTheme = theme.rawValue
-                        } label: {
-                            HStack {
-                                themeSwatch(theme)
-                                Text(theme.title)
-                                Spacer()
-                                if boardTheme == theme.rawValue {
-                                    Image(systemName: "checkmark")
+                Form {
+                    Section {
+                        ForEach(BoardTheme.allCases.filter { $0 != .custom }) { theme in
+                            Button {
+                                boardTheme = theme.rawValue
+                            } label: {
+                                HStack {
+                                    themeSwatch(theme)
+                                    Text(theme.title)
+                                    Spacer()
+                                    if boardTheme == theme.rawValue {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(DuoAccent.base)
+                                    }
                                 }
                             }
                         }
+                    } header: {
+                        Text("PRESETS")
                     }
-                }
 
-                Section("Custom squares") {
-                    ColorPicker("Light squares", selection: $light, supportsOpacity: false)
-                    ColorPicker("Dark squares", selection: $dark, supportsOpacity: false)
-                    Button(L10n.t(.useCustomColors)) {
-                        customLightHex = light.hexRGB
-                        customDarkHex = dark.hexRGB
-                        boardTheme = BoardTheme.custom.rawValue
+                    Section {
+                        ColorPicker("Light squares", selection: $light, supportsOpacity: false)
+                        ColorPicker("Dark squares", selection: $dark, supportsOpacity: false)
+                        Button(L10n.t(.useCustomColors)) {
+                            customLightHex = light.hexRGB
+                            customDarkHex = dark.hexRGB
+                            boardTheme = BoardTheme.custom.rawValue
+                        }
+                    } header: {
+                        Text("CUSTOM SQUARES")
                     }
-                }
 
-                Section {
-                    HStack(spacing: 0) {
-                        Rectangle().fill(previewLight)
-                        Rectangle().fill(previewDark)
-                        Rectangle().fill(previewLight)
-                        Rectangle().fill(previewDark)
+                    Section {
+                        HStack(spacing: 0) {
+                            Rectangle().fill(previewLight)
+                            Rectangle().fill(previewDark)
+                            Rectangle().fill(previewLight)
+                            Rectangle().fill(previewDark)
+                        }
+                        .frame(height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        Text(L10n.t(.piecesStandardized))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
-                    .frame(height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    Text(L10n.t(.piecesStandardized))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
-            }
-            .scrollContentBackground(.hidden)
+                .scrollContentBackground(.hidden)
+                .tint(DuoAccent.base)
             }
             .navigationTitle(L10n.t(.boardColorsTitle))
             .navigationBarTitleDisplayMode(.large)
@@ -86,6 +94,7 @@ struct BoardColorSettingsSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.t(.done)) { dismiss() }
+                        .fontWeight(.semibold)
                 }
             }
             .onAppear {
@@ -113,7 +122,7 @@ struct BoardColorSettingsSheet: View {
             Rectangle().fill(theme.darkSquare(custom: .default))
         }
         .frame(width: 36, height: 22)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 
