@@ -30,10 +30,10 @@ struct CoachCard: View {
             HStack(spacing: 8) {
                 Image(systemName: "lightbulb.fill")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(DuoAccent.base)
+                    .foregroundStyle(DuoAccent.ink)
                 Text(L10n.t(.moveGuide).uppercased())
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(DuoAccent.base)
+                    .foregroundStyle(DuoAccent.ink)
                     .tracking(0.8)
                 Spacer()
                 DuoChip(text: sourceLabel, tint: sourceColor)
@@ -64,7 +64,7 @@ struct CoachCard: View {
 
                 Text(message)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DuoAccent.muted)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
@@ -79,7 +79,7 @@ struct CoachCard: View {
                 Button(action: onHistory) {
                     Label(L10n.t(.coachHistory), systemImage: "clock.arrow.circlepath")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(DuoAccent.base)
+                        .foregroundStyle(DuoAccent.ink)
                 }
             }
         }

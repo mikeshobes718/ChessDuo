@@ -41,7 +41,7 @@ struct PastGamesView: View {
                                                         .foregroundStyle(DuoAccent.ink)
                                                     Text(L10n.t(.roomPrefix, match.roomCode))
                                                         .font(.caption)
-                                                        .foregroundStyle(.secondary)
+                                                        .foregroundStyle(DuoAccent.muted)
                                                 }
                                                 Spacer()
                                                 DuoChip(text: match.resultText, tint: DuoAccent.base)
@@ -56,7 +56,7 @@ struct PastGamesView: View {
                                                 }
                                             }
                                             .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(DuoAccent.muted)
                                         }
                                         .padding(16)
                                         .frame(maxWidth: .infinity, alignment: .leading)

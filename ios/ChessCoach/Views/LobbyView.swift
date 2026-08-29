@@ -37,7 +37,7 @@ struct LobbyView: View {
                     if step == .home {
                         Text(L10n.t(.lobbyTipFaceTime))
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DuoAccent.muted)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 28)
                             .padding(.bottom, 16)
@@ -128,7 +128,7 @@ struct LobbyView: View {
                 Image(systemName: "gearshape")
                     .symbolRenderingMode(.monochrome)
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(DuoAccent.base)
+                    .foregroundStyle(DuoAccent.ink)
             }
             .frame(width: 44, height: 44)
             .contentShape(Rectangle())
@@ -156,7 +156,7 @@ struct LobbyView: View {
 
             Text(subtitle)
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
         }
@@ -210,7 +210,7 @@ struct LobbyView: View {
             } label: {
                 Label(L10n.t(.watchGame), systemImage: "eye")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DuoAccent.muted)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
             }
@@ -253,7 +253,7 @@ struct LobbyView: View {
             DuoCodeField(text: $model.roomCodeInput)
             Text(L10n.t(.askPartnerCode))
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
 
             Button {
                 Task { await model.joinGame() }
@@ -340,7 +340,7 @@ struct LobbyView: View {
     private func stepLabel(_ text: String) -> some View {
         Text(text.uppercased())
             .font(.caption.weight(.bold))
-            .foregroundStyle(DuoAccent.base)
+            .foregroundStyle(DuoAccent.ink)
             .tracking(1.1)
     }
 }

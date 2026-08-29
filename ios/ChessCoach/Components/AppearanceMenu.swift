@@ -82,7 +82,7 @@ struct BoardColorSettingsSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         Text(L10n.t(.piecesStandardized))
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DuoAccent.muted)
                     }
                 }
                 .scrollContentBackground(.hidden)

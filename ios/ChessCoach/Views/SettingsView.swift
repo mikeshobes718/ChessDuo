@@ -171,7 +171,7 @@ struct SettingsView: View {
                 .font(.body.weight(.semibold))
             Text(detail)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 4)

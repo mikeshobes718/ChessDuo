@@ -61,7 +61,7 @@ struct MatchReviewView: View {
                 .background(DuoAccent.gradient, in: Capsule())
             Text(L10n.t(.reviewExplainer))
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
         }
@@ -90,7 +90,7 @@ struct MatchReviewView: View {
                                     .font(.subheadline.weight(.semibold))
                                 Text(detailLine(move))
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(DuoAccent.muted)
                             }
                             Spacer()
                             Text("\(precision)%")
@@ -103,7 +103,7 @@ struct MatchReviewView: View {
                 }
             } else {
                 Text(L10n.t(.reviewNoMoves))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DuoAccent.muted)
                     .padding(14)
                     .duoCard()
             }
@@ -122,14 +122,14 @@ struct MatchReviewView: View {
                 .foregroundStyle(color(for: accuracy))
             Text(L10n.t(.reviewAccuracy))
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
             if let unaided = player?.unaidedAccuracy, (player?.assistedCount ?? 0) > 0 {
                 Text(L10n.t(.reviewUnaided, unaided))
                     .font(.caption2.weight(.semibold))
             }
             Text(L10n.t(.reviewMoves, player?.moveCount ?? 0))
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
         }
         .frame(maxWidth: .infinity)
         .padding(16)

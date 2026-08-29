@@ -78,7 +78,7 @@ struct PieceLegendSheet: View {
                             .foregroundStyle(DuoAccent.ink)
                         Text(L10n.t(.pieceGuideSubtitle))
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DuoAccent.muted)
                     }
 
                     ForEach(cards) { card in
@@ -94,7 +94,7 @@ struct PieceLegendSheet: View {
                                         .foregroundStyle(DuoAccent.ink)
                                     Text(card.summary)
                                         .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(DuoAccent.base)
+                                        .foregroundStyle(DuoAccent.ink)
                                 }
                             }
 
@@ -104,7 +104,7 @@ struct PieceLegendSheet: View {
 
                             Text(card.detail)
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DuoAccent.muted)
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
