@@ -391,6 +391,49 @@ struct DuoToastBanner: View {
     }
 }
 
+// In-app "your move" card matched to the Messages notification banner https://mobbin.com/screens/17797b0e-f928-41e5-9ce9-d31c4f009941
+struct DuoTurnBanner: View {
+    let title: String
+    var detail: String? = nil
+    var onTap: (() -> Void)? = nil
+
+    var body: some View {
+        Button {
+            onTap?()
+        } label: {
+            HStack(spacing: DuoSpace.row) {
+                Image(systemName: "bell.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(DuoAccent.gradient, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(DuoAccent.ink)
+                    if let detail {
+                        Text(detail)
+                            .font(.footnote)
+                            .foregroundStyle(DuoAccent.muted)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DuoSpace.card)
+            .padding(.vertical, 12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: DuoRadius.tile, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DuoRadius.tile, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08))
+            )
+            .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(detail.map { "\(title). \($0)" } ?? title)
+    }
+}
+
 struct DuoLoadingCard: View {
     let text: String
 

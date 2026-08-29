@@ -8,6 +8,11 @@ struct PendingPromotion: Identifiable {
     let to: String
 }
 
+struct TurnAlert: Equatable {
+    let title: String
+    let detail: String?
+}
+
 @MainActor
 final class GameViewModel: ObservableObject {
     @Published var playerName = ""
@@ -35,6 +40,7 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var privateHintMessage: String?
     @Published var showMatchReview = false
     @Published var pendingPromotion: PendingPromotion?
+    @Published var turnAlert: TurnAlert?
     @Published private(set) var pendingPushToken: String?
     @Published var nudge = NudgeController()
 
@@ -44,6 +50,7 @@ final class GameViewModel: ObservableObject {
     private var lastKnownVersion = -1
     private var lastKnownTurn: PlayerColor?
     private var toastTask: Task<Void, Never>?
+    private var turnAlertTask: Task<Void, Never>?
     private var quizDismissTask: Task<Void, Never>?
     private var answeredQuizForVersion: Int?
     private var promotionContext: (from: String, to: String)?
@@ -278,7 +285,9 @@ final class GameViewModel: ObservableObject {
                 )
                 selectedSquare = nil
                 merge(response)
-                Feedback.success()
+                Feedback.moveSent()
+                Feedback.clearBadge()
+                dismissTurnAlert()
                 if let last = response.lastMove, let from = last.from, let to = last.to {
                     let sanSuffix = last.san.map { " (\($0))" } ?? ""
                     presentToast(L10n.t(
@@ -320,7 +329,9 @@ final class GameViewModel: ObservableObject {
                         )
                         selectedSquare = nil
                         merge(response)
-                        Feedback.success()
+                        Feedback.moveSent()
+                        Feedback.clearBadge()
+                        dismissTurnAlert()
                         presentToast(L10n.t(.computerFallback))
                         return
                     } catch {
@@ -697,12 +708,27 @@ final class GameViewModel: ObservableObject {
         let sentToken = hex
         let sentSession = session
         Task { [weak self] in
-            try? await self?.api.registerPush(apnsToken: sentToken, session: sentSession)
+            try? await self?.api.registerPush(
+                apnsToken: sentToken,
+                session: sentSession,
+                turnAlerts: Feedback.turnNotificationsEnabled
+            )
+        }
+    }
+
+    func setTurnNotificationsEnabled(_ enabled: Bool) {
+        if enabled {
+            Feedback.requestNotificationPermission()
+            UIApplication.shared.registerForRemoteNotifications()
+        }
+        guard let hex = pendingPushToken, let session, session.color != .spectator else { return }
+        Task { [weak self] in
+            try? await self?.api.registerPush(apnsToken: hex, session: session, turnAlerts: enabled)
         }
     }
 
     func clearBadge() {
-        UIApplication.shared.applicationIconBadgeNumber = 0
+        Feedback.clearBadge()
     }
 
     func handleRoomLink(_ code: String) {
@@ -755,7 +781,9 @@ final class GameViewModel: ObservableObject {
             )
             selectedSquare = nil
             merge(response)
-            Feedback.success()
+            Feedback.moveSent()
+            Feedback.clearBadge()
+            dismissTurnAlert()
         } catch {
             show(error)
             Feedback.warning()
@@ -878,12 +906,23 @@ final class GameViewModel: ObservableObject {
                   let session,
                   game.turn == session.color,
                   previousTurn != session.color {
-            Feedback.opponentMoved()
-            if UIApplication.shared.applicationState != .active {
-                Feedback.notifyYourTurn(roomCode: game.roomCode)
+            let moverName = displayName(for: session.color.opponent)
+            let detail = game.lastMove?.san.map { L10n.t(.playedSan, moverName, $0) }
+            if game.isCheck {
+                Feedback.check()
             } else {
-                presentToast(L10n.t(.yourTurnToast))
+                Feedback.yourTurn()
             }
+            Feedback.setTurnBadge()
+            if UIApplication.shared.applicationState != .active {
+                Feedback.notifyYourTurn(roomCode: game.roomCode, moveLabel: detail)
+            } else {
+                presentTurnAlert(title: L10n.t(.yourMove), detail: detail)
+            }
+        } else if previousVersion >= 0,
+                  game.version > previousVersion,
+                  session?.color == .spectator {
+            Feedback.softMoveLanded()
         }
 
         if justFinished {
@@ -902,7 +941,14 @@ final class GameViewModel: ObservableObject {
                 )
                 showMatchReview = true
             }
-            Feedback.success()
+            let status = game.status.lowercased()
+            let won = (status == "white_won" && session?.color == .white)
+                || (status == "black_won" && session?.color == .black)
+            if won {
+                Feedback.gameWon()
+            } else {
+                Feedback.gameOverFlat()
+            }
         }
 
         lastKnownVersion = game.version
@@ -924,6 +970,22 @@ final class GameViewModel: ObservableObject {
                 toastMessage = nil
             }
         }
+    }
+
+    private func presentTurnAlert(title: String, detail: String? = nil) {
+        turnAlertTask?.cancel()
+        turnAlert = TurnAlert(title: title, detail: detail)
+        turnAlertTask = Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if !Task.isCancelled {
+                turnAlert = nil
+            }
+        }
+    }
+
+    func dismissTurnAlert() {
+        turnAlertTask?.cancel()
+        turnAlert = nil
     }
 
     private func displayName(for color: PlayerColor) -> String {
@@ -980,6 +1042,12 @@ final class GameViewModel: ObservableObject {
         case "promotion":
             loadVisualPreview("playing")
             pendingPromotion = PendingPromotion(from: "e7", to: "e8")
+        case "turnalert":
+            loadVisualPreview("playing")
+            presentTurnAlert(title: L10n.t(.yourMove), detail: L10n.t(.playedSan, "Liana", "Nf3"))
+            Feedback.yourTurn()
+            Feedback.setTurnBadge()
+            print("[preview] turn alert shown, yourTurn sound+haptic fired, badge set to 1")
         case "review":
             session = PlayerSession(roomCode: "AB12CD", playerToken: "preview", color: .white, playerName: "Mike")
             var next = GameState()

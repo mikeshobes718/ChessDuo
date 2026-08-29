@@ -68,9 +68,12 @@ struct GameAPIClient {
         return try await send(payload)
     }
 
-    func registerPush(apnsToken: String, session: PlayerSession) async throws {
+    func registerPush(apnsToken: String, session: PlayerSession, turnAlerts: Bool? = nil) async throws {
         var payload = authenticatedPayload(action: "registerPush", session: session)
         payload["apnsToken"] = apnsToken
+        if let turnAlerts {
+            payload["turnAlerts"] = turnAlerts
+        }
         _ = try await send(payload)
     }
 

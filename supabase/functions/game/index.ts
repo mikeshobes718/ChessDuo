@@ -36,7 +36,8 @@ const uiCopy: Record<AppLang, {
   joinCoach: (white: string, joiner: string) => string;
   rematchCoach: string;
   pushJoined: (name: string, code: string) => string;
-  pushYourTurn: (name: string, code: string) => string;
+  pushYourMoveTitle: string;
+  pushYourTurn: (name: string, san: string, code: string) => string;
   pushDrawOffer: (name: string, code: string) => string;
   pushUndoOffer: (name: string, code: string) => string;
   pushDrawAnswer: (name: string, code: string) => string;
@@ -57,7 +58,10 @@ const uiCopy: Record<AppLang, {
     joinCoach: (white, black) => `Both players are ready. ${white} plays White and moves first. ${black} plays Black. Tap a white piece to see where it can go.`,
     rematchCoach: "Rematch started. Same colors. White moves first. Goal: put the other king in checkmate.",
     pushJoined: (name, code) => `${name} joined room ${code}. It's your move.`,
-    pushYourTurn: (name, code) => `${name} moved. It's your turn in room ${code}.`,
+    pushYourMoveTitle: "Your move",
+    pushYourTurn: (name, san, code) => san
+      ? `${name} played ${san}. Your turn in room ${code}.`
+      : `${name} moved. Your turn in room ${code}.`,
     pushDrawOffer: (name, code) => `${name} offers a draw in room ${code}.`,
     pushUndoOffer: (name, code) => `${name} asks to undo a move in room ${code}.`,
     pushDrawAnswer: (name, code) => `${name} answered your draw offer in room ${code}.`,
@@ -77,7 +81,10 @@ const uiCopy: Record<AppLang, {
     joinCoach: (white, black) => `Os dois estão prontos. ${white} joga de Brancas e começa. ${black} joga de Pretas. Toque numa peça branca para ver para onde ela pode ir.`,
     rematchCoach: "Revanche começada. Mesmas cores. As Brancas jogam primeiro. Objetivo: dar xeque-mate.",
     pushJoined: (name, code) => `${name} entrou na sala ${code}. Sua vez.`,
-    pushYourTurn: (name, code) => `${name} jogou. Sua vez na sala ${code}.`,
+    pushYourMoveTitle: "Sua vez",
+    pushYourTurn: (name, san, code) => san
+      ? `${name} jogou ${san}. Sua vez na sala ${code}.`
+      : `${name} jogou. Sua vez na sala ${code}.`,
     pushDrawOffer: (name, code) => `${name} propôs empate na sala ${code}.`,
     pushUndoOffer: (name, code) => `${name} pediu para desfazer na sala ${code}.`,
     pushDrawAnswer: (name, code) => `${name} respondeu à oferta de empate na sala ${code}.`,
@@ -97,7 +104,10 @@ const uiCopy: Record<AppLang, {
     joinCoach: (white, black) => `Los dos están listos. ${white} juega con Blancas y mueve primero. ${black} juega con Negras. Toca una pieza blanca para ver a dónde puede ir.`,
     rematchCoach: "Revancha empezada. Mismos colores. Las Blancas mueven primero. Objetivo: dar jaque mate.",
     pushJoined: (name, code) => `${name} entró en la sala ${code}. Es tu turno.`,
-    pushYourTurn: (name, code) => `${name} movió. Es tu turno en la sala ${code}.`,
+    pushYourMoveTitle: "Tu turno",
+    pushYourTurn: (name, san, code) => san
+      ? `${name} movió ${san}. Es tu turno en la sala ${code}.`
+      : `${name} movió. Es tu turno en la sala ${code}.`,
     pushDrawOffer: (name, code) => `${name} propone tablas en la sala ${code}.`,
     pushUndoOffer: (name, code) => `${name} pide deshacer en la sala ${code}.`,
     pushDrawAnswer: (name, code) => `${name} respondió a tu oferta de tablas en la sala ${code}.`,
@@ -1738,14 +1748,14 @@ async function applyPlayedMove(
       console.error("coach scheduling failed", error);
     }
   }
-  const opponentColor: "white" | "black" = color === "white" ? "black" : "white";
-  const opponentName = color === "white" ? game.black_name ?? "Black" : game.white_name;
+  const moverName = (color === "white" ? game.white_name : game.black_name)
+    ?? (color === "white" ? "White" : "Black");
   if (status === "active") {
     schedulePush(pushToOpponent(
       updated,
       color,
       "turn",
-      uiCopy[lang].pushYourTurn(opponentName, String(played.san ?? ""), updated.room_code),
+      uiCopy[lang].pushYourTurn(moverName, String(played.san ?? ""), updated.room_code),
       { title: uiCopy[lang].pushYourMoveTitle, requiresTurnAlerts: true },
     ));
   } else {
@@ -1942,7 +1952,7 @@ async function respondDraw(body: Record<string, unknown>) {
     draw_offer_by: null,
     undo_offer_by: null,
   });
-  pushToColor(updated, offer, "drawanswer", uiCopy[lang].pushDrawAnswer(offererName, updated.room_code));
+  schedulePush(pushToColor(updated, offer, "drawanswer", uiCopy[lang].pushDrawAnswer(offererName, updated.room_code)));
   await archiveMatch(updated);
   return publicGame(updated, color, lang);
 }

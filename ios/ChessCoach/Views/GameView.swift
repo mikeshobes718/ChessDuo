@@ -97,6 +97,19 @@ struct GameView: View {
                 }
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.toastMessage)
+            .overlay(alignment: .top) {
+                if let alert = model.turnAlert {
+                    DuoTurnBanner(
+                        title: alert.title,
+                        detail: alert.detail,
+                        onTap: { model.dismissTurnAlert() }
+                    )
+                    .padding(.horizontal, DuoSpace.screen)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.turnAlert)
             .overlay {
                 if model.isSubmittingMove {
                     ZStack {

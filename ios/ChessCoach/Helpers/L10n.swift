@@ -48,6 +48,8 @@ enum L10nKey: String {
     case computerFallback, computerPlayedMove
     case nudgeName, nudgeThem, nudgeCooldown, nudgeCapReached
     case nudgeSent, nudgeNoPush, nudgeReceived, nudgeYourMove
+    case yourMove, playedSan, yourTurnNotifBody, soundsAndHaptics
+    case turnNotifications, turnNotificationsDetail, notificationsDeniedHint, openIOSSettings
 }
 
 
@@ -192,6 +194,14 @@ enum L10n {
         "opponentPiece": "That piece belongs to your opponent.",
         "pieceCantMove": "That piece can't move right now.",
         "yourTurnToast": "Your turn!",
+        "yourMove": "Your move",
+        "playedSan": "%@ played %@",
+        "yourTurnNotifBody": "It's your turn.",
+        "soundsAndHaptics": "Sounds & Haptics",
+        "turnNotifications": "Turn notifications",
+        "turnNotificationsDetail": "Get a push notification when it becomes your move.",
+        "notificationsDeniedHint": "Notifications are off for Chess Duo. Turn them on in iOS Settings to get turn alerts.",
+        "openIOSSettings": "Open iOS Settings",
         "pickYourPiece": "Pick one of your pieces.",
         "pieceHelpKing": "The king moves one square at a time and must stay out of danger.",
         "pieceHelpQueen": "The queen moves any distance in a straight line or diagonal.",
@@ -428,6 +438,14 @@ enum L10n {
         "opponentPiece": "Essa peça é do seu oponente.",
         "pieceCantMove": "Essa peça não pode se mover agora.",
         "yourTurnToast": "Sua vez!",
+        "yourMove": "Sua vez",
+        "playedSan": "%@ jogou %@",
+        "yourTurnNotifBody": "É sua vez.",
+        "soundsAndHaptics": "Sons e vibração",
+        "turnNotifications": "Avisos de turno",
+        "turnNotificationsDetail": "Receba um aviso quando for sua vez de jogar.",
+        "notificationsDeniedHint": "Os avisos estão desligados para o Chess Duo. Ative nos Ajustes do iOS para receber avisos de turno.",
+        "openIOSSettings": "Abrir Ajustes do iOS",
         "pickYourPiece": "Escolha uma das suas peças.",
         "pieceHelpKing": "O rei anda uma casa por vez e precisa ficar fora de perigo.",
         "pieceHelpQueen": "A rainha anda qualquer distância em linha reta ou diagonal.",
@@ -664,6 +682,14 @@ enum L10n {
         "opponentPiece": "Esa pieza es de tu oponente.",
         "pieceCantMove": "Esa pieza no puede moverse ahora.",
         "yourTurnToast": "¡Tu turno!",
+        "yourMove": "Tu turno",
+        "playedSan": "%@ movió %@",
+        "yourTurnNotifBody": "Es tu turno.",
+        "soundsAndHaptics": "Sonidos y vibración",
+        "turnNotifications": "Avisos de turno",
+        "turnNotificationsDetail": "Recibe un aviso cuando sea tu turno.",
+        "notificationsDeniedHint": "Los avisos están desactivados para Chess Duo. Actívalos en Ajustes de iOS para recibir avisos de turno.",
+        "openIOSSettings": "Abrir Ajustes de iOS",
         "pickYourPiece": "Elige una de tus piezas.",
         "pieceHelpKing": "El rey se mueve una casilla a la vez y debe mantenerse fuera de peligro.",
         "pieceHelpQueen": "La reina se mueve cualquier distancia en línea recta o diagonal.",

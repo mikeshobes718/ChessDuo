@@ -27,6 +27,8 @@ struct ContentView: View {
             model.loadVisualPreview("review")
         } else if args.contains("-previewPromotion") {
             model.loadVisualPreview("promotion")
+        } else if args.contains("-previewTurnAlert") {
+            model.loadVisualPreview("turnalert")
         }
     }
 #endif

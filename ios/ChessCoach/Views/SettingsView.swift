@@ -2,19 +2,23 @@
 // Card grouping also follows Bumble settings https://mobbin.com/screens/fe8df009-b4b9-4349-9e8b-dc8ec89974e5
 
 import SwiftUI
+import UserNotifications
 
 struct SettingsView: View {
     @EnvironmentObject private var model: GameViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @AppStorage("appearanceMode") private var appearanceMode = AppearanceMode.system.rawValue
     @AppStorage("boardTheme") private var boardTheme = BoardTheme.classic.rawValue
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @AppStorage("soundsEnabled") private var soundsEnabled = true
+    @AppStorage("turnNotificationsEnabled") private var turnNotifications = true
     @AppStorage(AppLanguagePreference.storageKey) private var languagePreference =
         AppLanguagePreference.system.rawValue
     @State private var showingBoardColors = false
     @State private var showingPieceGuide = false
+    @State private var notificationsDenied = false
 
     var body: some View {
         NavigationStack {
@@ -118,8 +122,29 @@ struct SettingsView: View {
                     Section {
                         Toggle(L10n.t(.haptics), isOn: $hapticsEnabled)
                         Toggle(L10n.t(.sounds), isOn: $soundsEnabled)
+                        Toggle(isOn: $turnNotifications) {
+                            settingLabel(
+                                title: L10n.t(.turnNotifications),
+                                detail: L10n.t(.turnNotificationsDetail)
+                            )
+                        }
+                        if turnNotifications && notificationsDenied {
+                            HStack(alignment: .top, spacing: DuoSpace.row) {
+                                Text(L10n.t(.notificationsDeniedHint))
+                                    .font(.caption)
+                                    .foregroundStyle(DuoAccent.muted)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer()
+                                Button(L10n.t(.openIOSSettings)) {
+                                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                                        UIApplication.shared.open(url)
+                                    }
+                                }
+                                .font(.caption.weight(.semibold))
+                            }
+                        }
                     } header: {
-                        Text(L10n.t(.feedback).uppercased())
+                        Text(L10n.t(.soundsAndHaptics).uppercased())
                     }
 
                     Section {
@@ -155,6 +180,17 @@ struct SettingsView: View {
             .sheet(isPresented: $showingPieceGuide) {
                 PieceLegendSheet()
             }
+            .onChange(of: turnNotifications) { value in
+                model.setTurnNotificationsEnabled(value)
+            }
+            .task {
+                await refreshNotificationState()
+            }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active {
+                    Task { await refreshNotificationState() }
+                }
+            }
 #if DEBUG
             .onAppear {
                 let args = ProcessInfo.processInfo.arguments
@@ -175,5 +211,10 @@ struct SettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 4)
+    }
+
+    private func refreshNotificationState() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        notificationsDenied = settings.authorizationStatus == .denied
     }
 }
