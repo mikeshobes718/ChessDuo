@@ -74,6 +74,10 @@ struct GameAPIClient {
         _ = try await send(payload)
     }
 
+    func nudge(session: PlayerSession) async throws -> GameResponse {
+        try await send(authenticatedPayload(action: "nudge", session: session))
+    }
+
     func move(
         from: String,
         to: String,

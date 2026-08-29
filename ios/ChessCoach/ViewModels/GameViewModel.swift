@@ -36,6 +36,7 @@ final class GameViewModel: ObservableObject {
     @Published var showMatchReview = false
     @Published var pendingPromotion: PendingPromotion?
     @Published private(set) var pendingPushToken: String?
+    @Published var nudge = NudgeController()
 
     private let api: GameAPIClient
     private let store: SessionStore
@@ -419,6 +420,44 @@ final class GameViewModel: ObservableObject {
         return local
     }
 
+
+    func sendNudge() async {
+        guard let session, session.color != .spectator else { return }
+        guard nudge.isEnabled, !nudge.isSending else { return }
+        registerForPushIfAvailable()
+        nudge.beginSend()
+        defer { nudge.endSend() }
+        do {
+            let response = try await api.nudge(session: session)
+            consumeNudge(from: response)
+            let opponent = nudge.opponentName.isEmpty ? displayName(for: session.color.opponent) : nudge.opponentName
+            presentToast(nudge.applySendResult(
+                delivered: response.delivered,
+                remaining: response.nudgeRemaining,
+                cooldown: response.nudgeCooldownRemaining,
+                opponent: opponent
+            ))
+        } catch {
+            let text = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            nudge.applySendError(text, game: game, session: session)
+            presentToast(text)
+        }
+    }
+
+    func consumeNudge(from response: GameResponse) {
+        if let event = response.nudge { game.lastNudge = event }
+        if let cooldown = response.nudgeCooldownRemaining { game.nudgeCooldownRemaining = cooldown }
+        if let remaining = response.nudgeRemaining { game.nudgeRemaining = remaining }
+        nudge.sync(
+            game: game,
+            session: session,
+            incoming: response.nudge,
+            cooldown: response.nudgeCooldownRemaining,
+            remaining: response.nudgeRemaining,
+            presentToast: presentToast
+        )
+    }
+
     func resign() async {
         guard let session, session.color != .spectator else { return }
         isLoading = true
@@ -486,6 +525,7 @@ final class GameViewModel: ObservableObject {
                 let response = try await api.state(session: session, sinceVersion: known)
                 if response.changed == false {
                     lastKnownVersion = response.version ?? lastKnownVersion
+                    consumeNudge(from: response)
                     return
                 }
                 merge(response)
@@ -524,6 +564,7 @@ final class GameViewModel: ObservableObject {
         answeredQuizForVersion = nil
         lastKnownVersion = -1
         lastKnownTurn = nil
+        nudge.reset()
     }
 
     private func clearPrivateHint() {
@@ -537,6 +578,7 @@ final class GameViewModel: ObservableObject {
         if visualPreviewActive { return }
 #endif
         guard session != nil, pollingTask == nil else { return }
+        nudge.notePollingStarted()
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh()
@@ -549,6 +591,7 @@ final class GameViewModel: ObservableObject {
     func stopPolling() {
         pollingTask?.cancel()
         pollingTask = nil
+        nudge.notePollingStopped()
     }
 
     func shareRoomText() -> String {
@@ -724,6 +767,7 @@ final class GameViewModel: ObservableObject {
         let previousTurn = game.turn
         let wasFinished = game.isFinished
         let isPrivateHint = response.privateHint == true
+        consumeNudge(from: response)
 
         if let version = response.version, version == previousVersion, previousVersion >= 0,
            response.fen == nil, response.status == nil, response.coachText == nil,

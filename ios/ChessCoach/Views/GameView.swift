@@ -63,6 +63,7 @@ struct GameView: View {
                         showingSettings = true
                     } label: {
                         Image(systemName: "gearshape")
+                            .foregroundStyle(DuoAccent.ink)
                     }
                     .accessibilityLabel(L10n.t(.settings))
                     if !isWaitingForPartner {
@@ -70,14 +71,17 @@ struct GameView: View {
                             model.showLegend = true
                         } label: {
                             Image(systemName: "questionmark.circle")
+                                .foregroundStyle(DuoAccent.ink)
                         }
                         .accessibilityLabel(L10n.t(.pieceGuide))
                     }
                     ShareLink(item: model.shareRoomText()) {
                         Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(DuoAccent.ink)
                     }
                     .accessibilityLabel(L10n.t(.shareRoom))
                     Button(L10n.t(.leave)) { model.leaveGame() }
+                        .foregroundStyle(DuoAccent.ink)
                         .accessibilityHint(L10n.t(.leave))
                 }
             }
@@ -200,7 +204,7 @@ struct GameView: View {
                         .foregroundStyle(DuoAccent.ink)
                     Text(L10n.t(.sendCodePartner))
                         .font(.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DuoAccent.muted)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top, 12)
@@ -212,7 +216,7 @@ struct GameView: View {
                     HStack {
                         Text(L10n.t(.copyCode))
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(DuoAccent.muted)
                         Spacer()
                         Button {
                             model.copyRoomCode()
@@ -221,7 +225,7 @@ struct GameView: View {
                                 .font(.caption.weight(.bold))
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(DuoAccent.base)
+                        .foregroundStyle(DuoAccent.ink)
                     }
                     DuoCodeBoxes(code: model.game.roomCode, boxCount: max(6, model.game.roomCode.count))
 
@@ -248,8 +252,11 @@ struct GameView: View {
                         .font(.headline)
                     Text(L10n.t(.waitingPartnerDetail, model.game.roomCode))
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DuoAccent.muted)
                         .multilineTextAlignment(.center)
+                    NudgeActionLink(controller: model.nudge) {
+                        Task { await model.sendNudge() }
+                    }
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity)
@@ -257,7 +264,7 @@ struct GameView: View {
 
                 Text(L10n.t(.assistsStayOff))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DuoAccent.muted)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
 
@@ -266,7 +273,7 @@ struct GameView: View {
                 } label: {
                     Label(L10n.t(.settings), systemImage: "gearshape")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(DuoAccent.base)
+                        .foregroundStyle(DuoAccent.ink)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                 }
@@ -340,7 +347,7 @@ struct GameView: View {
 
             Text(model.game.goalText)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
                 .multilineTextAlignment(.center)
 
             if !isLandscape {
@@ -363,25 +370,30 @@ struct GameView: View {
     }
 
     private var turnPill: some View {
-        Text(model.turnBanner)
-            .font(.subheadline.weight(.bold))
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .padding(.horizontal, 14)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        Capsule(style: .continuous)
-                            .fill(DuoAccent.base.opacity(model.canMove ? 0.14 : 0.04))
-                    }
+        VStack(spacing: 7) {
+            Text(model.turnBanner)
+                .font(.subheadline.weight(.bold))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .padding(.horizontal, 14)
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay {
+                            Capsule(style: .continuous)
+                                .fill(DuoAccent.base.opacity(model.canMove ? 0.14 : 0.04))
+                        }
+                }
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(model.canMove ? DuoAccent.base.opacity(0.34) : Color.white.opacity(0.22), lineWidth: 0.8)
+                )
+                .shadow(color: Color.black.opacity(0.07), radius: 8, y: 3)
+            NudgeActionLink(controller: model.nudge) {
+                Task { await model.sendNudge() }
             }
-            .overlay(
-                Capsule(style: .continuous)
-                    .strokeBorder(model.canMove ? DuoAccent.base.opacity(0.34) : Color.white.opacity(0.22), lineWidth: 0.8)
-            )
-            .shadow(color: Color.black.opacity(0.07), radius: 8, y: 3)
+        }
     }
 
     @ViewBuilder
@@ -527,7 +539,7 @@ struct GameView: View {
                     .accessibilityLabel(model.boardFlipped ? L10n.t(.unflipBoard) : L10n.t(.flipBoard))
                 }
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(DuoAccent.base)
+                .foregroundStyle(DuoAccent.ink)
             }
             .frame(minWidth: 72)
             playerChip(
@@ -579,7 +591,7 @@ struct GameView: View {
             Text(L10n.t(.takenBy, model.game.blackName, glyphs(model.game.captured.whiteTaken)))
                 .font(.caption)
         }
-        .foregroundStyle(.secondary)
+        .foregroundStyle(DuoAccent.muted)
         .padding(.horizontal, 4)
     }
 
@@ -592,7 +604,7 @@ struct GameView: View {
             if let last = model.lastMoveLabel {
                 Text(last)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DuoAccent.muted)
             }
             if let session = model.session {
                 Text(session.color == .spectator
@@ -629,7 +641,7 @@ struct GameView: View {
                 if let feedback = model.quizFeedback {
                     Text(feedback)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(DuoAccent.muted)
                 }
             }
             .padding(14)
@@ -828,7 +840,7 @@ struct PromotionPickerSheet: View {
                 .foregroundStyle(DuoAccent.ink)
             Text("Pick the piece your pawn becomes.")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(options, id: \.piece) { option in
                     Button {
@@ -839,7 +851,7 @@ struct PromotionPickerSheet: View {
                                 .font(.system(size: 40))
                             Text(option.name)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DuoAccent.ink)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
@@ -875,7 +887,7 @@ private struct CoachHistorySheet: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(item.source.uppercased())
                                         .font(.caption2.weight(.bold))
-                                        .foregroundStyle(DuoAccent.base)
+                                        .foregroundStyle(DuoAccent.ink)
                                         .tracking(0.8)
                                     Text(item.text)
                                         .font(.subheadline)

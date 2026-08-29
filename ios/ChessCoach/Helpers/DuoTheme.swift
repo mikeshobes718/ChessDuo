@@ -8,10 +8,18 @@ enum DuoAccent {
     static let cream = Color(red: 0.99, green: 0.97, blue: 0.94)
     static let lavenderWash = Color(red: 0.93, green: 0.89, blue: 0.98)
     static let coralWash = Color(red: 0.98, green: 0.90, blue: 0.90)
+    // Cream in dark, deep ink in light. Use this (not base) on glass, toolbars, and secondary buttons.
+    // Matched to Apple Games invite https://mobbin.com/screens/f5527923-67ad-4b8a-8060-42af8acd9901
     static let ink = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 0.96, green: 0.94, blue: 0.98, alpha: 1)
             : UIColor(red: 0.14, green: 0.10, blue: 0.20, alpha: 1)
+    })
+
+    static let muted = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.80, green: 0.76, blue: 0.84, alpha: 1)
+            : UIColor.secondaryLabel
     })
 
     static var gradient: LinearGradient {
@@ -194,13 +202,13 @@ private struct DuoSecondaryButtonStyle: ViewModifier {
         content
             .font(.body.weight(.semibold))
             .frame(maxWidth: .infinity, minHeight: 50)
-            .foregroundStyle(DuoAccent.base.opacity(isEnabled ? 1 : 0.45))
+            .foregroundStyle(DuoAccent.ink.opacity(isEnabled ? 1 : 0.45))
             .background {
                 Capsule(style: .continuous)
                     .fill(.ultraThinMaterial)
                     .overlay {
                         Capsule(style: .continuous)
-                            .fill(Color.white.opacity(scheme == .dark ? 0.04 : 0.46))
+                            .fill(Color.white.opacity(scheme == .dark ? 0.12 : 0.46))
                     }
             }
             .overlay {
@@ -219,11 +227,11 @@ struct DuoChip: View {
     var body: some View {
         Text(text)
             .font(.caption.weight(.bold))
-            .foregroundStyle(tint)
+            .foregroundStyle(DuoAccent.ink)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(tint.opacity(0.14), in: Capsule())
-            .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 0.6))
+            .background(tint.opacity(0.18), in: Capsule())
+            .overlay(Capsule().strokeBorder(tint.opacity(0.28), lineWidth: 0.6))
     }
 }
 
@@ -267,7 +275,7 @@ struct DuoSectionHeader: View {
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DuoAccent.muted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -286,7 +294,7 @@ struct DuoSheetTitle: View {
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DuoAccent.muted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -303,10 +311,10 @@ struct DuoIconCircle: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(prominent ? Color.white.opacity(0.22) : DuoAccent.base.opacity(0.12))
+                .fill(prominent ? Color.white.opacity(0.22) : DuoAccent.base.opacity(0.16))
             Image(systemName: systemImage)
                 .font(.system(size: size * 0.42, weight: .bold))
-                .foregroundStyle(prominent ? Color.white : DuoAccent.base)
+                .foregroundStyle(prominent ? Color.white : DuoAccent.ink)
         }
         .frame(width: size, height: size)
     }
@@ -321,18 +329,18 @@ struct DuoEmptyState: View {
         VStack(alignment: .leading, spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(DuoAccent.base.opacity(0.12))
+                    .fill(DuoAccent.base.opacity(0.16))
                     .frame(width: 72, height: 72)
                 Image(systemName: systemImage)
                     .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(DuoAccent.base)
+                    .foregroundStyle(DuoAccent.ink)
             }
             Text(title)
                 .font(.title3.weight(.bold))
                 .foregroundStyle(DuoAccent.ink)
             Text(detail)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DuoAccent.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

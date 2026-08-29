@@ -154,6 +154,9 @@ struct GameState: Equatable {
     var review: MatchReview?
     var drawOfferBy: PlayerColor?
     var undoOfferBy: PlayerColor?
+    var lastNudge: NudgeEvent?
+    var nudgeCooldownRemaining = 0
+    var nudgeRemaining = 8
 
     var isFinished: Bool {
         result != nil || ["white_won", "black_won", "draw", "finished", "checkmate", "resigned"].contains(status.lowercased())
@@ -194,6 +197,10 @@ struct GameResponse: Decodable {
     var drawOfferBy: PlayerColor?
     var undoOfferBy: PlayerColor?
     var changed: Bool?
+    var nudge: NudgeEvent?
+    var nudgeCooldownRemaining: Int?
+    var nudgeRemaining: Int?
+    var delivered: String?
 
     private enum CodingKeys: String, CodingKey {
         case roomCode, room, code, playerToken, token, color, playerColor
@@ -203,6 +210,7 @@ struct GameResponse: Decodable {
         case lastMove, suggestedHint, quiz, threatenedSquares, captured
         case hintsRemaining, dailyHintLimit, goalText, apiVersion, privateHint
         case moveHistory, review, drawOfferBy, undoOfferBy, changed
+        case nudge, nudgeCooldownRemaining, nudgeRemaining, delivered
     }
 
     init(from decoder: Decoder) throws {
@@ -259,6 +267,10 @@ struct GameResponse: Decodable {
             undoOfferBy = nil
         }
         changed = try? container.decode(Bool.self, forKey: .changed)
+        nudge = try? container.decode(NudgeEvent.self, forKey: .nudge)
+        nudgeCooldownRemaining = try? container.decode(Int.self, forKey: .nudgeCooldownRemaining)
+        nudgeRemaining = try? container.decode(Int.self, forKey: .nudgeRemaining)
+        delivered = Self.string(container, [.delivered])
     }
 
     private static func string(

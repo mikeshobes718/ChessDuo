@@ -43,6 +43,22 @@ enum Feedback {
         }
     }
 
+    static func nudgeReceived() {
+        if hapticsEnabled {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+        if soundsEnabled {
+            AudioServicesPlaySystemSound(1007)
+        }
+    }
+
+    static let nudgeCategory = "NUDGE"
+
+    static func registerCategories() {
+        let nudge = UNNotificationCategory(identifier: nudgeCategory, actions: [], intentIdentifiers: [])
+        UNUserNotificationCenter.current().setNotificationCategories([nudge])
+    }
+
     static func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
     }

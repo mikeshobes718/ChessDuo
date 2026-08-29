@@ -46,6 +46,8 @@ enum L10nKey: String {
     case acceptUndo, declineUndo, undoOfferedByThem, undoOfferedByYou
     case pastGames, pastGamesEmpty, pastGamesDetail, noScorecard
     case computerFallback, computerPlayedMove
+    case nudgeName, nudgeThem, nudgeCooldown, nudgeCapReached
+    case nudgeSent, nudgeNoPush, nudgeReceived, nudgeYourMove
 }
 
 
@@ -292,6 +294,14 @@ enum L10n {
         "noScorecard": "No scorecard for this match.",
         "computerFallback": "Computer played a safe move.",
         "computerPlayedMove": "Computer (%@) played %@ → %@%@ for you.",
+        "nudgeName": "Nudge %@",
+        "nudgeThem": "Nudge them",
+        "nudgeCooldown": "Nudge available in %@",
+        "nudgeCapReached": "That's enough nudges for this game",
+        "nudgeSent": "Pinged %@",
+        "nudgeNoPush": "Couldn't reach their phone. They may have notifications off.",
+        "nudgeReceived": "%@ nudged you",
+        "nudgeYourMove": "Your move",
     ]
 
     private static let pt: [String: String] = [
@@ -520,6 +530,14 @@ enum L10n {
         "noScorecard": "Sem placar para esta partida.",
         "computerFallback": "O computador fez uma jogada segura.",
         "computerPlayedMove": "Computador (%@) jogou %@ → %@%@ por você.",
+        "nudgeName": "Cutucar %@",
+        "nudgeThem": "Cutucar",
+        "nudgeCooldown": "Pode cutucar de novo em %@",
+        "nudgeCapReached": "Já deu de cutucões nesta partida",
+        "nudgeSent": "Cutuquei %@",
+        "nudgeNoPush": "Não deu pra chegar no celular. Pode ser que as notificações estejam desligadas.",
+        "nudgeReceived": "%@ te cutucou",
+        "nudgeYourMove": "Sua vez",
     ]
 
     private static let es: [String: String] = [
@@ -748,5 +766,13 @@ enum L10n {
         "noScorecard": "Sin marcador para esta partida.",
         "computerFallback": "La computadora jugó una jugada segura.",
         "computerPlayedMove": "La computadora (%@) jugó %@ → %@%@ por ti.",
+        "nudgeName": "Dale un toque a %@",
+        "nudgeThem": "Dale un toque",
+        "nudgeCooldown": "Puedes tocar de nuevo en %@",
+        "nudgeCapReached": "Ya fueron suficientes toques en esta partida",
+        "nudgeSent": "Le di un toque a %@",
+        "nudgeNoPush": "No pude llegar a su teléfono. Puede que tenga las notificaciones apagadas.",
+        "nudgeReceived": "%@ te dio un toque",
+        "nudgeYourMove": "Te toca",
     ]
 }

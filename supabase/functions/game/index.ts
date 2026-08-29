@@ -295,12 +295,19 @@ async function sendApns(deviceToken: string, payload: Record<string, unknown>, c
   }
 }
 
+type PushOptions = {
+  title?: string;
+  badge?: number;
+  requiresTurnAlerts?: boolean;
+};
+
+// Shared delivery for every game push (turn, nudge, offers). Keeps sound, thread, and deep link consistent.
 async function pushToColor(
   game: Game,
   color: "white" | "black",
   kind: string,
   alert: string,
-  badge = 1,
+  options: PushOptions = {},
 ) {
   if (!pushConfigured) return;
   const hash = color === "white" ? game.white_token_hash : game.black_token_hash;
@@ -309,6 +316,9 @@ async function pushToColor(
     player_token_hash: `eq.${hash}`,
     select: "apns_token",
   });
+  if (options.requiresTurnAlerts) {
+    query.set("turn_alerts_enabled", "eq.true");
+  }
   try {
     const rows = await database(`push_tokens?${query}`);
     for (const row of rows ?? []) {
@@ -316,13 +326,14 @@ async function pushToColor(
         String(row.apns_token ?? ""),
         {
           aps: {
-            alert: { title: "Chess Duo", body: alert },
-            badge,
+            alert: { title: options.title ?? "Chess Duo", body: alert },
+            badge: options.badge ?? 1,
             sound: "default",
             "thread-id": game.room_code,
           },
           roomCode: game.room_code,
           kind,
+          url: `chessduo://room/${game.room_code}`,
         },
         `${game.room_code}-${kind}`,
       );
@@ -332,9 +343,26 @@ async function pushToColor(
   }
 }
 
-async function pushToOpponent(game: Game, color: string, kind: string, alert: string) {
+async function pushToOpponent(
+  game: Game,
+  color: string,
+  kind: string,
+  alert: string,
+  options: PushOptions = {},
+) {
   if (color !== "white" && color !== "black") return;
-  await pushToColor(game, color === "white" ? "black" : "white", kind, alert);
+  await pushToColor(game, color === "white" ? "black" : "white", kind, alert, options);
+}
+
+// Pushes must outlive the response, otherwise the isolate can freeze before APNs answers.
+function schedulePush(task: Promise<unknown>) {
+  try {
+    const waitUntil = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil;
+    if (waitUntil) waitUntil(task);
+    else task.catch((error) => console.error("push failed", error));
+  } catch (error) {
+    console.error("push scheduling failed", error);
+  }
 }
 
 async function registerPush(body: Record<string, unknown>) {
@@ -344,7 +372,11 @@ async function registerPush(body: Record<string, unknown>) {
   if (!/^[0-9a-fA-F]{64}$/.test(apnsToken)) throw new HttpError("Invalid device token", 400);
   const hash = await hashToken(token);
   const roomCode = String(body.roomCode ?? "").trim().toUpperCase() || null;
-  const row = { player_token_hash: hash, room_code: roomCode, apns_token: apnsToken.toLowerCase(), updated_at: new Date().toISOString() };
+  const row: Record<string, unknown> = { player_token_hash: hash, room_code: roomCode, apns_token: apnsToken.toLowerCase(), updated_at: new Date().toISOString() };
+  // Only write the toggle when the client sends it, so older builds never reset a user's choice.
+  if (body.turnAlerts !== undefined) {
+    row.turn_alerts_enabled = body.turnAlerts === true;
+  }
   // Atomic upsert on apns_token: two racing registrations must not collide on the unique index.
   await database(`push_tokens?on_conflict=apns_token`, {
     method: "POST",
@@ -526,13 +558,16 @@ function normalizeDifficulty(value: unknown): Difficulty {
 function difficultySettings(difficulty: Difficulty) {
   // Stronger than before, but stay under Edge Function WORKER_RESOURCE_LIMIT.
   if (difficulty === "easy") {
-    return { depth: 2, quiescePly: 0, nodeLimit: 4500, rootMoves: 12, noise: 35, noiseCap: 80, blunderChance: 0.1 };
+    return { depth: 2, maxDepth: 2, quiescePly: 0, nodeLimit: 4500, rootMoves: 12, noise: 35, noiseCap: 80, blunderChance: 0.1, timeMs: 0 };
   }
   if (difficulty === "hard") {
-    return { depth: 2, quiescePly: 3, nodeLimit: 11000, rootMoves: 20, noise: 0, noiseCap: 0, blunderChance: 0 };
+    // Iterative deepening 2 -> 4 under a wall-clock cap: the clock, not the position, decides how deep Hard gets.
+    return { depth: 2, maxDepth: 4, quiescePly: 4, nodeLimit: 30000, rootMoves: 20, noise: 0, noiseCap: 0, blunderChance: 0, timeMs: 1500 };
   }
-  return { depth: 2, quiescePly: 2, nodeLimit: 8000, rootMoves: 16, noise: 10, noiseCap: 28, blunderChance: 0.02 };
+  return { depth: 2, maxDepth: 2, quiescePly: 2, nodeLimit: 8000, rootMoves: 16, noise: 10, noiseCap: 28, blunderChance: 0.02, timeMs: 0 };
 }
+
+class SearchTimeout extends Error {}
 
 function openingBookPick(chess: Chess): EngineMove | null {
   // Compact book for the first few moves — stops the computer opening like a random beginner.
@@ -566,10 +601,17 @@ function squareIndex(color: "w" | "b", rank: number, file: number) {
 }
 
 function evaluateBoard(chess: Chess): number {
-  if (chess.isCheckmate()) {
+  // One legal-move generation per eval, reused for mate/stalemate/mobility. chess.js's
+  // isCheckmate/isStalemate/isDraw would each regenerate the same list.
+  const legalCount = searchChess(chess)._moves().length;
+  const inCheckNow = chess.inCheck();
+  if (inCheckNow && legalCount === 0) {
     return chess.turn() === "w" ? -100000 : 100000;
   }
-  if (chess.isDraw() || chess.isStalemate()) {
+  if (legalCount === 0) {
+    return 0;
+  }
+  if (chess.isDrawByFiftyMoves() || chess.isInsufficientMaterial() || chess.isThreefoldRepetition()) {
     return 0;
   }
 
@@ -615,7 +657,7 @@ function evaluateBoard(chess: Chess): number {
     score += piece.color === "w" ? bonus : -bonus;
   }
 
-  const mobility = chess.moves().length;
+  const mobility = searchChess(chess)._moves().length;
   score += chess.turn() === "w" ? mobility * 4 : -mobility * 4;
   if (chess.inCheck()) {
     score += chess.turn() === "w" ? -35 : 35;
@@ -656,27 +698,80 @@ function orderMoves(moves: EngineMove[]) {
   });
 }
 
+// chess.js's public move APIs regenerate every legal move (plus SAN strings and FENs)
+// on each call, which makes them ~100x slower than the internal generator. The edge
+// function pins chess.js@1.4.0, so the search drives _moves/_makeMove/_undoMove
+// directly and only pays for pretty moves at the root.
+const SEARCH_PROMOTION = 16;
+const SEARCH_KSIDE = 32;
+const SEARCH_QSIDE = 64;
+
+type SearchMove = {
+  from: number;
+  to: number;
+  flags: number;
+  piece: string;
+  captured?: string;
+  promotion?: string;
+};
+
+type SearchChess = {
+  _moves: () => SearchMove[];
+  _makeMove: (move: SearchMove) => void;
+  _undoMove: () => unknown;
+};
+
+function searchChess(chess: Chess) {
+  return chess as unknown as SearchChess;
+}
+
+function algebraicSquare(square: number) {
+  return "abcdefgh"[square & 15] + "87654321"[square >> 4];
+}
+
+function searchMoveKey(move: { from: number; to: number; promotion?: string }) {
+  return `${algebraicSquare(move.from)}${algebraicSquare(move.to)}${move.promotion ?? ""}`;
+}
+
+function orderSearchMoves(moves: SearchMove[]) {
+  const scored = moves.map((move) => {
+    let score = 0;
+    if (move.captured) score += 10 * (pieceValues[move.captured] ?? 0) - (pieceValues[move.piece] ?? 0);
+    if (move.promotion) score += 800;
+    if (move.flags & (SEARCH_KSIDE | SEARCH_QSIDE)) score += 45;
+    const file = move.to & 15;
+    const rank = move.to >> 4;
+    if (file >= 2 && file <= 5 && rank >= 3 && rank <= 4) score += 18;
+    if (move.piece === "n" || move.piece === "b") score += 8;
+    return { move, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((item) => item.move);
+}
+
 function quiescence(
   chess: Chess,
   alpha: number,
   beta: number,
   side: number,
   ply: number,
-  counter: { nodes: number; limit: number },
+  counter: { nodes: number; limit: number; deadline: number },
 ): number {
   counter.nodes += 1;
+  if ((counter.nodes & 63) === 0 && Date.now() > counter.deadline) throw new SearchTimeout();
   const standPat = side * evaluateBoard(chess);
   if (ply <= 0 || counter.nodes > counter.limit) return standPat;
   if (standPat >= beta) return beta;
   if (standPat > alpha) alpha = standPat;
 
-  const captures = orderMoves(
-    chess.moves({ verbose: true }).filter((move) => Boolean(move.captured)) as EngineMove[],
+  const game = searchChess(chess);
+  const captures = orderSearchMoves(
+    game._moves().filter((move) => Boolean(move.captured)),
   ).slice(0, 12);
   for (const move of captures) {
-    chess.move(move);
+    game._makeMove(move);
     const score = -quiescence(chess, -beta, -alpha, -side, ply - 1, counter);
-    chess.undo();
+    game._undoMove();
     if (score >= beta) return beta;
     if (score > alpha) alpha = score;
   }
@@ -690,21 +785,24 @@ function negamax(
   beta: number,
   side: number,
   quiescePly: number,
-  counter: { nodes: number; limit: number },
+  counter: { nodes: number; limit: number; deadline: number },
 ): number {
   counter.nodes += 1;
+  if ((counter.nodes & 63) === 0 && Date.now() > counter.deadline) throw new SearchTimeout();
   if (counter.nodes > counter.limit) return side * evaluateBoard(chess);
-  if (chess.isGameOver()) return side * evaluateBoard(chess);
   if (depth <= 0) return quiescence(chess, alpha, beta, side, quiescePly, counter);
 
-  const moves = orderMoves(chess.moves({ verbose: true }) as EngineMove[]);
+  // No legal moves means mate or stalemate; evaluateBoard scores both. Skipping isGameOver()
+  // here avoids a second throwaway move generation at every node.
+  const moves = orderSearchMoves(searchChess(chess)._moves());
   if (!moves.length) return side * evaluateBoard(chess);
 
+  const game = searchChess(chess);
   let best = -Infinity;
   for (const move of moves) {
-    chess.move(move);
+    game._makeMove(move);
     const score = -negamax(chess, depth - 1, -beta, -alpha, -side, quiescePly, counter);
-    chess.undo();
+    game._undoMove();
     if (score > best) best = score;
     if (score > alpha) alpha = score;
     if (alpha >= beta) break;
@@ -718,33 +816,60 @@ function rankedMoves(
   quiescePly = 0,
   nodeLimit = 8000,
   rootMoves = 16,
-) {
+  deadline = Infinity,
+  previous?: Array<{ move: EngineMove; score: number }>,
+): { scored: Array<{ move: EngineMove; score: number }>; completed: boolean; nodes: number } {
   const root = new Chess(chess.fen());
-  const moves = orderMoves(root.moves({ verbose: true }) as EngineMove[]).slice(
-    0,
-    Math.max(4, rootMoves),
-  );
-  const side = root.turn() === "w" ? 1 : -1;
-  const counter = { nodes: 0, limit: nodeLimit };
-  let alpha = -Infinity;
-  const scored: Array<{ move: EngineMove; score: number }> = [];
-  for (const move of moves) {
-    if (counter.nodes > counter.limit) break;
-    root.move(move);
-    const score = -negamax(
-      root,
-      Math.max(0, depth - 1),
-      -Infinity,
-      -alpha,
-      -side,
-      quiescePly,
-      counter,
+  let moves = orderMoves(root.moves({ verbose: true }) as EngineMove[]);
+  if (previous?.length) {
+    // Search the last iteration's best moves first — better alpha-beta cutoffs at the next depth.
+    const rank = new Map(previous.map((item, index) => [`${item.move.from}${item.move.to}${item.move.promotion ?? ""}`, index]));
+    moves = moves.sort(
+      (a, b) =>
+        (rank.get(`${a.from}${a.to}${a.promotion ?? ""}`) ?? 999) - (rank.get(`${b.from}${b.to}${b.promotion ?? ""}`) ?? 999),
     );
-    root.undo();
-    scored.push({ move, score });
-    if (score > alpha) alpha = score;
   }
-  return scored.sort((a, b) => b.score - a.score);
+  moves = moves.slice(0, Math.max(4, rootMoves));
+  // Match each pretty root move to its internal move once, so the search below
+  // never pays for SAN/FEN generation again.
+  const lookup = new Map(searchChess(root)._moves().map((move) => [searchMoveKey(move), move]));
+  const side = root.turn() === "w" ? 1 : -1;
+  const counter = { nodes: 0, limit: nodeLimit, deadline };
+  const game = searchChess(root);
+  let alpha = -Infinity;
+  let completed = true;
+  const scored: Array<{ move: EngineMove; score: number }> = [];
+  try {
+    for (const move of moves) {
+      if (counter.nodes > counter.limit) {
+        completed = false;
+        break;
+      }
+      const internal = lookup.get(`${move.from}${move.to}${move.promotion ?? ""}`);
+      if (!internal) {
+        completed = false;
+        break;
+      }
+      game._makeMove(internal);
+      const score = -negamax(
+        root,
+        Math.max(0, depth - 1),
+        -Infinity,
+        -alpha,
+        -side,
+        quiescePly,
+        counter,
+      );
+      game._undoMove();
+      scored.push({ move, score });
+      if (score > alpha) alpha = score;
+    }
+  } catch (error) {
+    if (!(error instanceof SearchTimeout)) throw error;
+    completed = false;
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return { scored, completed, nodes: counter.nodes };
 }
 
 function enginePick(chess: Chess, difficulty: Difficulty = "medium") {
@@ -753,9 +878,6 @@ function enginePick(chess: Chess, difficulty: Difficulty = "medium") {
   // Mate in one: always take it, on every level.
   const mateNow = legal.find((move) => move.san.includes("#"));
   if (mateNow) return mateNow;
-  // Free captures are hard for humans to refuse — grab them unless we intentionally blunder.
-  const freeCapture = legal.find((move) => Boolean(move.captured));
-  if (difficulty === "hard" && freeCapture) return freeCapture;
 
   if (chess.history().length < 10) {
     const book = openingBookPick(chess);
@@ -765,15 +887,42 @@ function enginePick(chess: Chess, difficulty: Difficulty = "medium") {
 
   let ranked: Array<{ move: EngineMove; score: number }> = [];
   try {
-    ranked = rankedMoves(
-      chess,
-      settings.depth,
-      settings.quiescePly,
-      settings.nodeLimit,
-      settings.rootMoves,
-    );
+    if (difficulty === "hard") {
+      // Iterative deepening: always keep the deepest fully completed iteration, so a
+      // slow position degrades to a shallower search instead of a timeout.
+      const deadline = Date.now() + settings.timeMs;
+      let previous: Array<{ move: EngineMove; score: number }> | undefined;
+      for (let depth = settings.depth; depth <= settings.maxDepth; depth += 1) {
+        if (Date.now() > deadline) break;
+        const result = rankedMoves(
+          chess,
+          depth,
+          settings.quiescePly,
+          settings.nodeLimit,
+          settings.rootMoves,
+          deadline,
+          previous,
+        );
+        if (result.completed && result.scored.length) {
+          ranked = result.scored;
+          previous = result.scored;
+          if (result.scored[0].score >= 99900) break;
+        } else if (!ranked.length && result.scored.length) {
+          ranked = result.scored;
+        }
+        if (!result.completed) break;
+      }
+    } else {
+      ranked = rankedMoves(
+        chess,
+        settings.depth,
+        settings.quiescePly,
+        settings.nodeLimit,
+        settings.rootMoves,
+      ).scored;
+    }
   } catch {
-    ranked = rankedMoves(chess, 1, 0, 1200, 10);
+    ranked = rankedMoves(chess, 1, 0, 1200, 10).scored;
   }
   if (!ranked.length) {
     return legal[0] ?? null;
@@ -814,7 +963,7 @@ function precisionForMove(
 ) {
   try {
     // Very light scoring — must never tip the Edge Function over its memory limit.
-    const ranked = rankedMoves(chessBefore, 1, 0, 900, 10);
+    const ranked = rankedMoves(chessBefore, 1, 0, 900, 10).scored;
     if (!ranked.length) return 100;
     const best = ranked[0].score;
     const worst = ranked[ranked.length - 1].score;
@@ -1196,6 +1345,7 @@ function publicGame(game: Game, color: string, lang: AppLang = "en") {
     language: lang,
     drawOfferBy: game.draw_offer_by ?? null,
     undoOfferBy: game.undo_offer_by ?? null,
+    ...nudgePublicFields(game, color),
   };
 }
 
@@ -1357,14 +1507,7 @@ async function join(body: Record<string, unknown>) {
     suggested_hint: null,
   });
   const creatorColor = joinerIsWhite ? "black" : "white";
-  try {
-    const waitUntil = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil;
-    const alert = uiCopy[lang].pushJoined(blackName, game.room_code);
-    if (waitUntil) waitUntil(pushToColor(updated, creatorColor, "joined", alert));
-    else pushToColor(updated, creatorColor, "joined", alert);
-  } catch (error) {
-    console.error("join push scheduling failed", error);
-  }
+  schedulePush(pushToColor(updated, creatorColor, "joined", uiCopy[lang].pushJoined(blackName, game.room_code)));
   return {
     ...publicGame(updated, joinerIsWhite ? "white" : "black", lang),
     playerToken: token,
@@ -1598,10 +1741,16 @@ async function applyPlayedMove(
   const opponentColor: "white" | "black" = color === "white" ? "black" : "white";
   const opponentName = color === "white" ? game.black_name ?? "Black" : game.white_name;
   if (status === "active") {
-    pushToOpponent(updated, color, "turn", uiCopy[lang].pushYourTurn(opponentName, updated.room_code));
+    schedulePush(pushToOpponent(
+      updated,
+      color,
+      "turn",
+      uiCopy[lang].pushYourTurn(opponentName, String(played.san ?? ""), updated.room_code),
+      { title: uiCopy[lang].pushYourMoveTitle, requiresTurnAlerts: true },
+    ));
   } else {
     const result = resultText(status, lang) ?? "Game over";
-    pushToOpponent(updated, color, "gameover", uiCopy[lang].pushGameOver(result, updated.room_code));
+    schedulePush(pushToOpponent(updated, color, "gameover", uiCopy[lang].pushGameOver(result, updated.room_code)));
   }
   return publicGame(updated, color, lang);
 }
@@ -1747,7 +1896,7 @@ async function offerDraw(body: Record<string, unknown>) {
     coach_source: "quick",
     coach_history: historyPush(game, coachText, "quick"),
   });
-  pushToOpponent(updated, color, "drawoffer", uiCopy[lang].pushDrawOffer(name, updated.room_code));
+  schedulePush(pushToOpponent(updated, color, "drawoffer", uiCopy[lang].pushDrawOffer(name, updated.room_code)));
   return publicGame(updated, color, lang);
 }
 
@@ -1770,7 +1919,7 @@ async function respondDraw(body: Record<string, unknown>) {
       coach_source: "quick",
       coach_history: historyPush(game, coachText, "quick"),
     });
-    pushToColor(updated, offer, "drawanswer", uiCopy[lang].pushDrawAnswer(offererName, updated.room_code));
+    schedulePush(pushToColor(updated, offer, "drawanswer", uiCopy[lang].pushDrawAnswer(offererName, updated.room_code)));
     return publicGame(updated, color, lang);
   }
   const history = Array.isArray(game.move_history) ? game.move_history : [];
@@ -1817,7 +1966,7 @@ async function offerUndo(body: Record<string, unknown>) {
     coach_source: "quick",
     coach_history: historyPush(game, coachText, "quick"),
   });
-  pushToOpponent(updated, color, "undooffer", uiCopy[lang].pushUndoOffer(name, updated.room_code));
+  schedulePush(pushToOpponent(updated, color, "undooffer", uiCopy[lang].pushUndoOffer(name, updated.room_code)));
   return publicGame(updated, color, lang);
 }
 
@@ -1840,7 +1989,7 @@ async function respondUndo(body: Record<string, unknown>) {
       coach_source: "quick",
       coach_history: historyPush(game, coachText, "quick"),
     });
-    pushToColor(updated, offer, "undoanswer", uiCopy[lang].pushUndoAnswer(offererName, updated.room_code));
+    schedulePush(pushToColor(updated, offer, "undoanswer", uiCopy[lang].pushUndoAnswer(offererName, updated.room_code)));
     return publicGame(updated, color, lang);
   }
   const history = Array.isArray(game.move_history) ? [...game.move_history] : [];
@@ -1876,7 +2025,7 @@ async function respondUndo(body: Record<string, unknown>) {
     undo_offer_by: null,
     draw_offer_by: null,
   });
-  pushToColor(updated, offer, "undoanswer", uiCopy[lang].pushUndoAnswer(offererName, updated.room_code));
+  schedulePush(pushToColor(updated, offer, "undoanswer", uiCopy[lang].pushUndoAnswer(offererName, updated.room_code)));
   return publicGame(updated, color, lang);
 }
 
@@ -1963,7 +2112,7 @@ async function rematch(body: Record<string, unknown>) {
   });
   const opponentColor: "white" | "black" = color === "white" ? "black" : "white";
   const opponentName = color === "white" ? game.black_name ?? "Black" : game.white_name;
-  pushToOpponent(updated, color, "rematch", uiCopy[lang].pushRematch(opponentName, updated.room_code));
+  schedulePush(pushToOpponent(updated, color, "rematch", uiCopy[lang].pushRematch(opponentName, updated.room_code)));
   return publicGame(updated, color, lang);
 }
 
@@ -1975,6 +2124,172 @@ async function version() {
       openRouter: Deno.env.get("OPENROUTER_MODEL") ?? "openai/gpt-5.6-luna",
       openAI: Deno.env.get("OPENAI_MODEL") ?? "gpt-5.4-mini",
     },
+  };
+}
+
+const NUDGE_COOLDOWN_MS = 90_000;
+const NUDGE_MAX_PER_GAME = 8;
+
+type NudgeEvent = { id: string; fromColor: string; fromName: string; createdAt: string };
+
+function nudgePushCopy(lang: AppLang, toName: string, fromName: string) {
+  if (lang === "pt") {
+    return { title: `${toName}, sua vez`, body: `${fromName} está esperando no Chess Duo` };
+  }
+  if (lang === "es") {
+    return { title: `${toName}, te toca`, body: `${fromName} te espera en Chess Duo` };
+  }
+  return { title: `${toName}, your move`, body: `${fromName} is waiting in Chess Duo` };
+}
+
+function incomingNudge(game: Game, color: string): NudgeEvent | null {
+  const event = game.last_nudge;
+  if (!event?.id || event.fromColor === color) return null;
+  return event;
+}
+
+function nudgeCount(game: Game, color: string) {
+  return color === "white" ? Number(game.white_nudge_count ?? 0) : Number(game.black_nudge_count ?? 0);
+}
+
+function lastNudgeAt(game: Game, color: string) {
+  return color === "white" ? game.white_last_nudge_at ?? null : game.black_last_nudge_at ?? null;
+}
+
+function cooldownRemainingSeconds(game: Game, color: string) {
+  const raw = lastNudgeAt(game, color);
+  if (!raw) return 0;
+  const elapsed = Date.now() - Date.parse(raw);
+  if (!Number.isFinite(elapsed)) return 0;
+  return Math.max(0, Math.ceil((NUDGE_COOLDOWN_MS - elapsed) / 1000));
+}
+
+function opponentLastSeenSeconds(game: Game, color: string) {
+  const raw = color === "white" ? game.black_last_seen : game.white_last_seen;
+  if (!raw) return null;
+  const elapsed = Date.now() - Date.parse(raw);
+  if (!Number.isFinite(elapsed)) return null;
+  return Math.max(0, Math.floor(elapsed / 1000));
+}
+
+function nudgePublicFields(game: Game, color: string) {
+  return {
+    nudge: incomingNudge(game, color),
+    nudgeCooldownRemaining: cooldownRemainingSeconds(game, color),
+    nudgeRemaining: Math.max(0, NUDGE_MAX_PER_GAME - nudgeCount(game, color)),
+    opponentLastSeenSeconds: opponentLastSeenSeconds(game, color),
+  };
+}
+
+async function touchPresence(game: Game, color: string) {
+  if (color !== "white" && color !== "black") return;
+  const field = color === "white" ? "white_last_seen" : "black_last_seen";
+  try {
+    const query = new URLSearchParams({ id: `eq.${game.id}` });
+    await database(`games?${query}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ [field]: new Date().toISOString() }),
+    });
+  } catch (error) {
+    console.error("touchPresence failed", error);
+  }
+}
+
+async function tokensForColor(game: Game, color: "white" | "black") {
+  const hash = color === "white" ? game.white_token_hash : game.black_token_hash;
+  if (!hash) return [];
+  const query = new URLSearchParams({
+    player_token_hash: `eq.${hash}`,
+    select: "apns_token",
+  });
+  try {
+    const rows = await database(`push_tokens?${query}`);
+    return (rows ?? []).map((row: { apns_token?: string }) => String(row.apns_token ?? "")).filter(Boolean);
+  } catch (error) {
+    console.error("tokensForColor failed", error);
+    return [];
+  }
+}
+
+async function sendNudgePush(game: Game, toColor: "white" | "black", title: string, body: string, nudgeId: string) {
+  if (!pushConfigured) return;
+  const tokens = await tokensForColor(game, toColor);
+  for (const deviceToken of tokens) {
+    await sendApns(
+      deviceToken,
+      {
+        aps: {
+          alert: { title, body },
+          badge: 1,
+          sound: "default",
+          "thread-id": game.room_code,
+          category: "NUDGE",
+        },
+        roomCode: game.room_code,
+        kind: "nudge",
+        nudgeId,
+        url: `chessduo://room/${game.room_code}`,
+      },
+      `${game.room_code}-nudge`,
+    );
+  }
+}
+
+async function persistNudge(game: Game, color: "white" | "black", event: NudgeEvent, count: number) {
+  const at = event.createdAt;
+  const changes = color === "white"
+    ? { last_nudge: event, white_last_nudge_at: at, white_nudge_count: count }
+    : { last_nudge: event, black_last_nudge_at: at, black_nudge_count: count };
+  const query = new URLSearchParams({ id: `eq.${game.id}`, select: "*" });
+  const rows = await database(`games?${query}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify(changes),
+  });
+  return (rows?.[0] ?? { ...game, ...changes }) as Game;
+}
+
+async function nudge(body: Record<string, unknown>) {
+  const { game, color } = await authenticated(body);
+  if (color !== "white" && color !== "black") throw new HttpError("Spectators cannot nudge", 403);
+  const lang = normalizeLanguage(body.language);
+  const waiting = game.status === "waiting";
+  const active = game.status === "active";
+  if (!waiting && !active) throw new HttpError("Game is not active");
+  if (active) {
+    const turn = new Chess(game.fen).turn() === "w" ? "white" : "black";
+    if (turn === color) throw new HttpError("It's your turn");
+  }
+  const used = nudgeCount(game, color);
+  if (used >= NUDGE_MAX_PER_GAME) {
+    throw new HttpError("That's enough nudges for this game", 429);
+  }
+  const wait = cooldownRemainingSeconds(game, color);
+  if (wait > 0) throw new HttpError("Wait a bit before nudging again", 429);
+
+  const fromName = color === "white" ? game.white_name : game.black_name ?? "Black";
+  const toColor: "white" | "black" = color === "white" ? "black" : "white";
+  const toName = toColor === "white" ? game.white_name : game.black_name ?? "your partner";
+  const event: NudgeEvent = {
+    id: crypto.randomUUID(),
+    fromColor: color,
+    fromName,
+    createdAt: new Date().toISOString(),
+  };
+  const updated = await persistNudge(game, color, event, used + 1);
+  const tokens = await tokensForColor(updated, toColor);
+  let delivered: "apns" | "no_push" = "no_push";
+  if (pushConfigured && tokens.length > 0) {
+    const copy = nudgePushCopy(lang, toName, fromName);
+    await sendNudgePush(updated, toColor, copy.title, copy.body, event.id);
+    delivered = "apns";
+  }
+  return {
+    ...publicGame(updated, color, lang),
+    delivered,
+    nudge: incomingNudge(updated, color),
+    ...nudgePublicFields(updated, color),
   };
 }
 
@@ -1994,9 +2309,10 @@ Deno.serve(async (request) => {
       registerPush,
       state: async (value) => {
         const { game, color } = await authenticated(value);
+        touchPresence(game, color);
         const sinceVersion = Number(value.sinceVersion);
         if (Number.isFinite(sinceVersion) && sinceVersion > 0 && sinceVersion === game.version) {
-          return { changed: false, version: game.version };
+          return { changed: false, version: game.version, ...nudgePublicFields(game, color) };
         }
         return publicGame(game, color, normalizeLanguage(value.language));
       },
@@ -2011,6 +2327,7 @@ Deno.serve(async (request) => {
       listArchives,
       getArchive,
     };
+    actions.nudge = nudge;
     const action = actions[String(body.action ?? "")];
     if (!action) throw new HttpError("Unknown action");
     return json(await action(body));

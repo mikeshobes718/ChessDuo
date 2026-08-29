@@ -41,6 +41,13 @@ alter table public.games add column if not exists draw_offer_by text
   check (draw_offer_by is null or draw_offer_by in ('white', 'black'));
 alter table public.games add column if not exists undo_offer_by text
   check (undo_offer_by is null or undo_offer_by in ('white', 'black'));
+alter table public.games add column if not exists white_last_seen timestamptz;
+alter table public.games add column if not exists black_last_seen timestamptz;
+alter table public.games add column if not exists white_last_nudge_at timestamptz;
+alter table public.games add column if not exists black_last_nudge_at timestamptz;
+alter table public.games add column if not exists white_nudge_count integer not null default 0;
+alter table public.games add column if not exists black_nudge_count integer not null default 0;
+alter table public.games add column if not exists last_nudge jsonb;
 
 create table if not exists public.match_archives (
   id uuid primary key default gen_random_uuid(),
@@ -77,7 +84,8 @@ create table if not exists public.push_tokens (
   player_token_hash char(64) not null,
   room_code text,
   apns_token text not null unique,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  turn_alerts_enabled boolean not null default true
 );
 
 create index if not exists push_tokens_hash_idx on public.push_tokens (player_token_hash);
