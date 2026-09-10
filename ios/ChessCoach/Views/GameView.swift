@@ -154,8 +154,7 @@ struct GameView: View {
                 L10n.t(.gameUpdate),
                 isPresented: Binding(
                     get: {
-                        model.errorMessage != nil &&
-                        model.errorMessage != "Connection lost. Reconnecting…"
+                        model.errorMessage != nil && !model.isReconnecting
                     },
                     set: { if !$0 { model.clearError() } }
                 )

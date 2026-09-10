@@ -49,6 +49,8 @@ final class GameViewModel: ObservableObject {
     private var pollingTask: Task<Void, Never>?
     private var lastKnownVersion = -1
     private var lastKnownTurn: PlayerColor?
+    private var consecutivePollFailures = 0
+    private let pollFailuresBeforeBanner = 3
     private var toastTask: Task<Void, Never>?
     private var turnAlertTask: Task<Void, Never>?
     private var quizDismissTask: Task<Void, Never>?
@@ -537,19 +539,16 @@ final class GameViewModel: ObservableObject {
                 if response.changed == false {
                     lastKnownVersion = response.version ?? lastKnownVersion
                     consumeNudge(from: response)
+                    markPollSucceeded()
                     return
                 }
                 merge(response)
             }
-            isReconnecting = false
-            if errorMessage == "Connection lost. Reconnecting…" {
-                errorMessage = nil
-            }
+            markPollSucceeded()
         } catch is CancellationError {
             return
         } catch {
-            isReconnecting = true
-            errorMessage = "Connection lost. Reconnecting…"
+            markPollFailed()
         }
     }
 
@@ -575,6 +574,8 @@ final class GameViewModel: ObservableObject {
         answeredQuizForVersion = nil
         lastKnownVersion = -1
         lastKnownTurn = nil
+        consecutivePollFailures = 0
+        isReconnecting = false
         nudge.reset()
     }
 
@@ -603,6 +604,21 @@ final class GameViewModel: ObservableObject {
         pollingTask?.cancel()
         pollingTask = nil
         nudge.notePollingStopped()
+    }
+
+    private func markPollSucceeded() {
+        consecutivePollFailures = 0
+        isReconnecting = false
+        if errorMessage == L10n.t(.connectionLost) {
+            errorMessage = nil
+        }
+    }
+
+    private func markPollFailed() {
+        consecutivePollFailures += 1
+        guard consecutivePollFailures >= pollFailuresBeforeBanner else { return }
+        isReconnecting = true
+        errorMessage = L10n.t(.connectionLost)
     }
 
     func shareRoomText() -> String {

@@ -57,7 +57,7 @@ struct GameAPIClient {
             "action": "spectate",
             "roomCode": roomCode.uppercased(),
             "clientVersion": Self.clientVersion
-        ])
+        ], timeout: 8)
     }
 
     func state(session: PlayerSession, sinceVersion: Int? = nil) async throws -> GameResponse {
@@ -65,7 +65,7 @@ struct GameAPIClient {
         if let sinceVersion {
             payload["sinceVersion"] = sinceVersion
         }
-        return try await send(payload)
+        return try await send(payload, timeout: 8)
     }
 
     func registerPush(apnsToken: String, session: PlayerSession, turnAlerts: Bool? = nil) async throws {
@@ -245,14 +245,14 @@ struct GameAPIClient {
         ]
     }
 
-    private func send(_ payload: [String: Any]) async throws -> GameResponse {
+    private func send(_ payload: [String: Any], timeout: TimeInterval = 20) async throws -> GameResponse {
         var payload = payload
         payload["language"] = AppLanguage.resolved.apiCode
         var request = URLRequest(url: baseURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 20
+        request.timeoutInterval = timeout
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
         do {
