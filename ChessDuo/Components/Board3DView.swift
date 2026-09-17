@@ -8,6 +8,11 @@ struct Board3DView: UIViewRepresentable {
     let interaction: BoardInteraction
     var cameraPreset: CameraPreset
     var onTap: (Square) -> Void
+    /// Incremented by the parent to snap the camera back to the default angle.
+    var resetToken: Int = 0
+    /// Reports whether the viewer has orbited/zoomed away from the default camera,
+    /// so the parent can offer a "reset view" control.
+    var onCameraMovedChange: ((Bool) -> Void)? = nil
 
     @EnvironmentObject private var settings: AppSettings
 
@@ -29,6 +34,13 @@ struct Board3DView: UIViewRepresentable {
         view.addGestureRecognizer(pan)
         let pinch = UIPinchGestureRecognizer(target: coordinator, action: #selector(Coordinator.handlePinch(_:)))
         view.addGestureRecognizer(pinch)
+        // Double tap is the usual "put the camera back" gesture in a 3D viewer.
+        let doubleTap = UITapGestureRecognizer(target: coordinator, action: #selector(Coordinator.handleDoubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        view.addGestureRecognizer(doubleTap)
+        tap.require(toFail: doubleTap)
+        coordinator.onCameraMovedChange = onCameraMovedChange
+        coordinator.lastResetToken = resetToken
         coordinator.setOrientation(interaction.orientation, animated: false)
         coordinator.setElevation(cameraPreset.elevation, animated: false)
         coordinator.sync(position: position, animated: false)
@@ -39,11 +51,16 @@ struct Board3DView: UIViewRepresentable {
     func updateUIView(_ view: SCNView, context: Context) {
         let c = context.coordinator
         c.onTap = onTap
+        c.onCameraMovedChange = onCameraMovedChange
         c.updateColors(light: UIColor(settings.lightSquare), dark: UIColor(settings.darkSquare), frame: UIColor(settings.boardTheme.frame))
         c.setOrientation(interaction.orientation, animated: true)
         if c.lastPreset != cameraPreset {
             c.lastPreset = cameraPreset
             c.setElevation(cameraPreset.elevation, animated: true)
+        }
+        if c.lastResetToken != resetToken {
+            c.lastResetToken = resetToken
+            c.resetCamera(animated: true)
         }
         c.sync(position: position, animated: settings.animations)
         c.applyHighlights(interaction)
@@ -53,7 +70,9 @@ struct Board3DView: UIViewRepresentable {
 
     final class Coordinator: NSObject {
         var onTap: ((Square) -> Void)?
+        var onCameraMovedChange: ((Bool) -> Void)?
         var lastPreset: CameraPreset?
+        var lastResetToken = 0
         private weak var view: SCNView?
         private let scene = SCNScene()
         private let boardRoot = SCNNode()          // rotates for orientation
@@ -66,9 +85,13 @@ struct Board3DView: UIViewRepresentable {
         private var pieceKinds: [Int: Piece] = [:]
         private var highlightNodes: [SCNNode] = []
         private var lastPositionFEN = ""
+        private static let defaultDistance: Double = 13.8
         private var yaw: Double = 0
         private var elevation: Double = 50
-        private var distance: Double = 13.8
+        private var distance: Double = Coordinator.defaultDistance
+        /// The elevation the current camera preset asks for; panning moves `elevation` away from it.
+        private var presetElevation: Double = 50
+        private var reportedMoved = false
         private var lightColor = UIColor.white
         private var darkColor = UIColor.gray
         private var frameMaterial = SCNMaterial()
@@ -85,9 +108,10 @@ struct Board3DView: UIViewRepresentable {
             // Board frame
             let frameGeo = SCNBox(width: 9.2, height: 0.45, length: 9.2, chamferRadius: 0.12)
             frameMaterial.diffuse.contents = frame
-            frameMaterial.roughness.contents = 0.55
-            frameMaterial.metalness.contents = 0.05
-            frameMaterial.lightingModel = .physicallyBased
+            // Matte lambert shading: a board is wood/stone, not metal, and a PBR material here
+            // under a single strong directional light produces a distracting specular hotspot
+            // that moves with the camera. Lambert (diffuse-only) stays evenly lit at any angle.
+            frameMaterial.lightingModel = .lambert
             frameGeo.materials = [frameMaterial]
             let frameNode = SCNNode(geometry: frameGeo)
             frameNode.position = SCNVector3(0, -0.23, 0)
@@ -100,8 +124,7 @@ struct Board3DView: UIViewRepresentable {
                     let geo = SCNBox(width: squareSize, height: 0.08, length: squareSize, chamferRadius: 0.0)
                     let mat = SCNMaterial()
                     mat.diffuse.contents = sq.isLight ? light : dark
-                    mat.roughness.contents = 0.35
-                    mat.lightingModel = .physicallyBased
+                    mat.lightingModel = .lambert
                     geo.materials = [mat]
                     let node = SCNNode(geometry: geo)
                     node.position = worldPosition(for: sq, y: 0.04)
@@ -195,16 +218,47 @@ struct Board3DView: UIViewRepresentable {
 
         // MARK: Camera
 
+        private var defaultYaw: Double { orientation == .white ? 0 : Double.pi }
+
+        /// True once the viewer has orbited, tilted or zoomed away from the default camera.
+        private var isCameraMoved: Bool {
+            abs(yaw - defaultYaw) > 0.02
+                || abs(elevation - presetElevation) > 0.5
+                || abs(distance - Coordinator.defaultDistance) > 0.15
+        }
+
+        private func reportCameraMoved() {
+            let moved = isCameraMoved
+            guard moved != reportedMoved else { return }
+            reportedMoved = moved
+            // resetCamera() runs from updateUIView, so hand the flag back on the next tick:
+            // mutating SwiftUI state inside a view-update pass is undefined and gets dropped.
+            let notify = onCameraMovedChange
+            DispatchQueue.main.async { notify?(moved) }
+        }
+
+        /// Snaps the camera back to the default angle, tilt and zoom for the current orientation/preset.
+        func resetCamera(animated: Bool) {
+            yaw = defaultYaw
+            elevation = presetElevation
+            distance = Coordinator.defaultDistance
+            updateCamera(animated: animated)
+            reportCameraMoved()
+        }
+
         func setOrientation(_ color: PieceColor, animated: Bool) {
             guard color != orientation else { return }
             orientation = color
             yaw = color == .white ? 0 : Double.pi
             updateCamera(animated: animated)
+            reportCameraMoved()
         }
 
         func setElevation(_ degrees: Double, animated: Bool) {
+            presetElevation = degrees
             elevation = degrees
             updateCamera(animated: animated)
+            reportCameraMoved()
         }
 
         private func updateCamera(animated: Bool) {
@@ -223,12 +277,19 @@ struct Board3DView: UIViewRepresentable {
             yaw -= Double(t.x) * 0.008
             elevation = min(85, max(20, elevation + Double(t.y) * 0.25))
             updateCamera(animated: false)
+            reportCameraMoved()
         }
 
         @objc func handlePinch(_ g: UIPinchGestureRecognizer) {
             distance = min(20, max(9, distance / Double(g.scale)))
             g.scale = 1
             updateCamera(animated: false)
+            reportCameraMoved()
+        }
+
+        @objc func handleDoubleTap(_ g: UITapGestureRecognizer) {
+            guard isCameraMoved else { return }
+            resetCamera(animated: true)
         }
 
         @objc func handleTap(_ g: UITapGestureRecognizer) {
@@ -327,10 +388,10 @@ struct Board3DView: UIViewRepresentable {
 
         private func material(for color: PieceColor) -> SCNMaterial {
             let m = SCNMaterial()
-            m.lightingModel = .physicallyBased
+            // Lambert here too: pieces are carved wood/resin, and a PBR specular hotspot on a
+            // curved surface reads as an odd glossy patch rather than a natural highlight.
+            m.lightingModel = .lambert
             m.diffuse.contents = color == .white ? UIColor(red: 0.94, green: 0.91, blue: 0.84, alpha: 1) : UIColor(red: 0.16, green: 0.14, blue: 0.15, alpha: 1)
-            m.roughness.contents = color == .white ? 0.35 : 0.3
-            m.metalness.contents = 0.08
             return m
         }
 

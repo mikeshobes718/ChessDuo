@@ -63,17 +63,24 @@ struct RootView: View {
                 case "computer":
                     // Debug/UI-test entry point: force-enable assist controls so automated taps and
                     // screenshots can exercise Hint / Play for me / the coach card, even though real
-                    // users get them off by default.
+                    // users get them off by default. 2D as well: the UI tests address squares by
+                    // grid coordinates, which only map to the 2D board (3D is covered by
+                    // CHESSDUO_SCREEN=computer3d and test3DCameraReset).
                     settings.hintsEnabled = true
                     settings.playForMe = true
                     settings.coachCard = true
-                    activeLocal = GameSession(kind: .computer(.club, human: .white), whiteName: "Mike", blackName: "Computer · Club", timeControl: TimeControl(minutes: 30, increment: 0))
+                    settings.prefers3D = false
+                    let s = GameSession(kind: .computer(.club, human: .white), whiteName: "Mike", blackName: "Computer · Club", timeControl: TimeControl(minutes: 30, increment: 0))
+                    s.use3D = false
+                    activeLocal = s
                 case "computer3d":
                     let s = GameSession(kind: .computer(.club, human: .white), whiteName: "Mike", blackName: "Computer · Club", timeControl: .none)
                     s.use3D = true
                     activeLocal = s
                 case "local":
+                    settings.prefers3D = false
                     let s = GameSession(kind: .local, whiteName: "Mike", blackName: "Liana", timeControl: TimeControl(minutes: 5, increment: 3))
+                    s.use3D = false
                     for san in ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O"] { s.debugPlay(san: san) }
                     activeLocal = s
                 case "puzzles": path.append(HomeRoute.puzzles)

@@ -232,6 +232,30 @@ final class ChessDuoUITests: XCTestCase {
         tapAlert("Leave")
     }
 
+    /// The 3D board can be orbited freely, so it must offer a way back to the default camera.
+    func test3DCameraReset() {
+        app.terminate()
+        app.launchEnvironment["CHESSDUO_SCREEN"] = "computer3d"
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Your turn"].waitForExistence(timeout: 10))
+        sleep(2)
+        let reset = app.buttons["board.resetView"].firstMatch
+        XCTAssertFalse(reset.exists, "reset control should stay hidden until the camera is moved")
+
+        // Orbit the board with a drag.
+        let board = app.otherElements["board"].firstMatch
+        XCTAssertTrue(board.waitForExistence(timeout: 5))
+        board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: board.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.35)))
+        XCTAssertTrue(reset.waitForExistence(timeout: 5), "reset control should appear once the camera moved")
+
+        reset.tap()
+        let gone = NSPredicate(format: "exists == false")
+        expectation(for: gone, evaluatedWith: reset, handler: nil)
+        waitForExpectations(timeout: 6)
+        XCTAssertFalse(reset.exists, "reset control should disappear once the camera is back home")
+    }
+
     func testPuzzlesLearnSettings() {
         app.terminate()
         app.launchEnvironment["CHESSDUO_SCREEN"] = "puzzles"

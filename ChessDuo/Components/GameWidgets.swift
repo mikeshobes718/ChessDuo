@@ -8,15 +8,27 @@ struct ChessBoardContainer: View {
     var onTap: (Square) -> Void
     var onDrop: ((Square, Square) -> Void)? = nil
     @EnvironmentObject private var settings: AppSettings
+    @State private var cameraMoved = false
+    @State private var cameraResetToken = 0
 
     var body: some View {
         ZStack {
             if use3D {
-                Board3DView(position: position, interaction: interaction, cameraPreset: settings.cameraPreset, onTap: onTap)
+                Board3DView(
+                    position: position,
+                    interaction: interaction,
+                    cameraPreset: settings.cameraPreset,
+                    onTap: onTap,
+                    resetToken: cameraResetToken,
+                    onCameraMovedChange: { moved in
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { cameraMoved = moved }
+                    }
+                )
                     .aspectRatio(1, contentMode: .fit)
                     // SceneKit exposes every node to accessibility, which makes the tree huge and slow; the 2D board is the accessible one.
                     .accessibilityHidden(true)
                     .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.black.opacity(0.08)))
+                    .overlay(alignment: .topTrailing) { if cameraMoved { resetViewButton } }
                     .transition(.opacity)
             } else {
                 BoardView2D(position: position, interaction: interaction, showCoordinates: settings.showCoordinates, onTap: onTap, onDrop: onDrop)
@@ -29,6 +41,30 @@ struct ChessBoardContainer: View {
         .animation(.easeInOut(duration: 0.25), value: use3D)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("board")
+        .onChange(of: use3D) { _, isThreeD in
+            // Going back to 2D and returning should start from the default angle again.
+            if !isThreeD { cameraMoved = false; cameraResetToken += 1 }
+        }
+    }
+
+    /// Appears only once the viewer has orbited or zoomed away from the default camera.
+    private var resetViewButton: some View {
+        Button {
+            cameraResetToken += 1
+            Feedback.shared.impact(.light)
+        } label: {
+            Label(L10n.t("game.resetView"), systemImage: "arrow.counterclockwise")
+                .font(.caption.weight(.semibold))
+                .labelStyle(.titleAndIcon)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(Duo.accent.opacity(0.5), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .padding(10)
+        .transition(.scale.combined(with: .opacity))
+        .accessibilityIdentifier("board.resetView")
     }
 }
 
