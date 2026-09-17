@@ -55,7 +55,15 @@ struct RootView: View {
                 .interactiveDismissDisabled()
         }
         .onAppear {
+            // Reapply the saved Light/Dark/System preference to the actual window: SwiftUI's
+            // preferredColorScheme (set below) is enough for the initial content, but a window
+            // that already existed before this view appeared (e.g. after a hot relaunch) needs
+            // this to pick up a Light/Dark override rather than staying on System.
+            settings.applyAppearanceToWindows()
             #if DEBUG
+            if let appearance = ProcessInfo.processInfo.environment["CHESSDUO_APPEARANCE"].flatMap(AppearanceMode.init) {
+                settings.appearance = appearance
+            }
             if let screen = ProcessInfo.processInfo.environment["CHESSDUO_SCREEN"] {
                 settings.hasOnboarded = true
                 settings.playerName = "Mike"

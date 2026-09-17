@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Combine
 
 /// All user preferences, persisted to UserDefaults. One shared instance is injected as an environment object.
@@ -11,7 +12,12 @@ final class AppSettings: ObservableObject {
     @Published var language: AppLanguage { didSet { defaults.set(language.rawValue, forKey: "app.language"); languageTick += 1 } }
     /// Bumped whenever the language changes so views re-render their strings.
     @Published var languageTick = 0
-    @Published var appearance: AppearanceMode { didSet { defaults.set(appearance.rawValue, forKey: "app.appearance") } }
+    @Published var appearance: AppearanceMode {
+        didSet {
+            defaults.set(appearance.rawValue, forKey: "app.appearance")
+            applyAppearanceToWindows()
+        }
+    }
     @Published var boardTheme: BoardTheme { didSet { defaults.set(boardTheme.rawValue, forKey: "board.theme") } }
     @Published var pieceStyle: PieceStyle { didSet { defaults.set(pieceStyle.rawValue, forKey: "board.pieces") } }
     @Published var customLightHex: String { didSet { defaults.set(customLightHex, forKey: "board.customLight") } }
@@ -77,5 +83,25 @@ final class AppSettings: ObservableObject {
     var displayName: String {
         let trimmed = playerName.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? L10n.t("game.you") : trimmed
+    }
+
+    /// SwiftUI's `.preferredColorScheme` only reaches views already in the tree it's attached
+    /// to — a `.sheet` or `.fullScreenCover` (its own hosting controller) can silently fall back
+    /// to the system appearance. Setting `overrideUserInterfaceStyle` directly on every window
+    /// bypasses that and forces Light/Dark everywhere, including modals and system controls like
+    /// the share sheet.
+    func applyAppearanceToWindows() {
+        let style: UIUserInterfaceStyle
+        switch appearance {
+        case .system: style = .unspecified
+        case .light: style = .light
+        case .dark: style = .dark
+        }
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                window.overrideUserInterfaceStyle = style
+            }
+        }
     }
 }
