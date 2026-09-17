@@ -59,7 +59,7 @@ final class AppSettings: ObservableObject {
         animations = bool("board.animations", true)
         hintsEnabled = bool("assist.hints", false)
         moveGuide = bool("assist.guide", false)
-        coachCard = bool("assist.coach", false)
+        coachCard = bool("assist.coach", true)
         playForMe = bool("assist.playForMe", false)
         assistLevel = EngineLevel(rawValue: d.integer(forKey: "assist.level")) ?? .club
         sounds = bool("fx.sounds", true)
