@@ -5,7 +5,7 @@ Private workflow between Mike’s Mac (this machine builds/ships) and the Pfizer
 ## Repo
 
 - GitHub: `https://github.com/mikeshobes718/ChessDuo`
-- Local Mac path: `/Users/mike/Documents/ChessCoach`
+- Local Mac path: `/Users/mike/Documents/ChessDuo`
 - Do **not** put this under Pfizer script trees or mix with work repos.
 
 ## Who does what
@@ -37,7 +37,7 @@ git push -u origin HEAD
 ## Mac after Opus pushes
 
 ```bash
-cd /Users/mike/Documents/ChessCoach
+cd /Users/mike/Documents/ChessDuo
 git pull
 # build / deploy / install as needed
 ```

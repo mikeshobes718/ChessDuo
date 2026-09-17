@@ -14,27 +14,25 @@ backend/.env.*
 backend/node_modules/
 backend/.vercel/
 
-# Xcode / Swift
-ios/build/
-ios/.build/
-ios/.build-device/
-ios/DerivedData/
-ios/**/xcuserdata/
-ios/*.xcuserstate
+# Xcode / Swift (new native app)
+ChessDuo/.build*/
+ChessDuo/build/
+DerivedData/
+xcuserdata/
 **/xcuserdata/
 *.xcuserstate
 *.xccheckout
 *.xcscmblueprint
-DerivedData/
-.build/
+ChessDuo/Assets.xcassets/**/*.imageset/.DS_Store
+
+# iCloud Drive conflict copies (see repo notes)
+* [0-9].swift
+* [0-9].xcodeproj/
 
 # Misc
 *.log
 *.tmp
 .std_deploy_pid
 .build_pid
-ios/ChessCoach 2.xcodeproj/
-ios/ChessCoach 3.xcodeproj/
-ios/ChessCoach 4.xcodeproj/
 docs/screenshots/
 supabase/.temp/
