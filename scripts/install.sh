@@ -48,11 +48,11 @@ install_to() {
   fi
 }
 
-status=0
+rc=0
 case "$TARGETS" in
-  mike) install_to mike || status=1 ;;
-  liana) install_to liana || status=1 ;;
-  all) install_to mike || status=1; install_to liana || status=1 ;;
+  mike) install_to mike || rc=1 ;;
+  liana) install_to liana || rc=1 ;;
+  all) install_to mike || rc=1; install_to liana || rc=1 ;;
   *) echo "unknown target $TARGETS"; exit 2 ;;
 esac
-exit $status
+exit $rc
