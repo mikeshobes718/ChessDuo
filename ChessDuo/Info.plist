@@ -3,7 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>API_GAME_URL</key>
-	<string>https://kcdlmmfzeksjqwdppjzy.supabase.co/functions/v1/game</string>
+	<string>https://api.atberth.com/v1/apps/chessduo/functions/game</string>
+	<key>API_PUBLISHABLE_KEY</key>
+	<string>bpk_0iJVm1fvX7TyC8x7RKs6huaDEAJSI5vK-DuIoESR9Jk</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

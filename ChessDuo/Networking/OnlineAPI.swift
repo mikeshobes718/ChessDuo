@@ -16,16 +16,19 @@ enum OnlineError: LocalizedError {
     }
 }
 
-/// Client for the Chess Duo game edge function (Supabase). Stateless; the session carries auth.
+/// Client for the Chess Duo game function on Berth. Stateless; the session carries auth.
+/// The publishable key only lets the app call the function; the tables stay server-only.
 struct OnlineAPI {
     static let clientVersion = "3.0.0"
     private let baseURL: URL
+    private let publishableKey: String?
     private let session: URLSession
 
     init(session: URLSession = .shared) {
         self.session = session
         let configured = Bundle.main.object(forInfoDictionaryKey: "API_GAME_URL") as? String
-        baseURL = URL(string: configured ?? "https://kcdlmmfzeksjqwdppjzy.supabase.co/functions/v1/game")!
+        baseURL = URL(string: configured ?? "https://api.atberth.com/v1/apps/chessduo/functions/game")!
+        publishableKey = Bundle.main.object(forInfoDictionaryKey: "API_PUBLISHABLE_KEY") as? String
     }
 
     func create(name: String) async throws -> OnlineResponse {
@@ -150,6 +153,9 @@ struct OnlineAPI {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let publishableKey, !publishableKey.isEmpty {
+            req.setValue(publishableKey, forHTTPHeaderField: "apikey")
+        }
         req.timeoutInterval = timeout
         req.httpBody = try JSONSerialization.data(withJSONObject: payload)
         return req

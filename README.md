@@ -8,7 +8,7 @@ Native SwiftUI chess for two, rebuilt from scratch. iOS 17+, iPhone and iPad.
   (stalemate, fifty-move, repetition, insufficient material), alpha-beta search with iterative
   deepening, quiescence, transposition table, killers/history, null-move and LMR, an opening book,
   five difficulty levels, an on-device coach, and a post-game reviewer (accuracy, best/mistake/blunder).
-- **Modes**: Online rooms (existing Supabase edge function, room codes, spectate, draw/undo offers,
+- **Modes**: Online rooms (Berth game function, room codes, spectate, draw/undo offers,
   nudges, push alerts), Pass & Play, vs Computer, Puzzles (100 engine-verified), Learn, Analysis board.
 - **Boards**: 2D (Canvas, drag or tap, sliding animations) and 3D (SceneKit, orbit/pinch camera,
   animated moves). Ten board themes + custom colours, three piece styles.
@@ -34,5 +34,12 @@ Bundle id `com.mikeshobes.chesscoachduo` (same as the original app, so it replac
 
 ## Server
 
-Online play talks to `https://kcdlmmfzeksjqwdppjzy.supabase.co/functions/v1/game` (unchanged from
-v1; source lives in `../ChessCoach/supabase/functions/game`). No secrets in this repo.
+Online play talks to the `game` function on Berth, app `chessduo`:
+`https://api.atberth.com/v1/apps/chessduo/functions/game`. The source is `berth/functions/game.ts`,
+deployed with `berth functions deploy --app chessduo game berth/functions/game.ts --verify key
+--timeout-ms 30000 --memory-mb 256`. The app sends the publishable key (`API_PUBLISHABLE_KEY`,
+safe to ship); the `games`, `match_archives`, and `push_tokens` tables are secret-only, so only the
+function can touch them. Function secrets (APNs, OpenRouter/OpenAI) are set with `berth env set`.
+
+`supabase/` is the previous backend, kept until the old database is retired. No secret keys in
+this repo.

@@ -19,7 +19,9 @@ targets:
     info:
       path: ChessDuo/Info.plist
       properties:
-        API_GAME_URL: "https://kcdlmmfzeksjqwdppjzy.supabase.co/functions/v1/game"
+        API_GAME_URL: "https://api.atberth.com/v1/apps/chessduo/functions/game"
+        # Berth publishable key: safe to ship, it can only call the game function.
+        API_PUBLISHABLE_KEY: "bpk_0iJVm1fvX7TyC8x7RKs6huaDEAJSI5vK-DuIoESR9Jk"
         CFBundleDisplayName: "Chess Duo"
         CFBundleShortVersionString: "2.0"
         CFBundleVersion: "40"
