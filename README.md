@@ -41,5 +41,13 @@ deployed with `berth functions deploy --app chessduo game berth/functions/game.t
 safe to ship); the `games`, `match_archives`, and `push_tokens` tables are secret-only, so only the
 function can touch them. Function secrets (APNs, OpenRouter/OpenAI) are set with `berth env set`.
 
+Optional accounts use Berth end-user auth on the same app (`ChessDuo/Account`): Apple, Google, email +
+password, and passwordless email codes; `/auth/reset` for forgot password (two calls, signs in, and Berth
+revokes every other session); `/auth/verify-email` for a signed-in but unverified user; `/auth/sessions`
+for the signed-in devices screen. `chessduo` requires a verified email, so password signup returns no
+session until the emailed code is confirmed via `/auth/verify` (a wrong address can be corrected first
+with `POST /auth/email {email, current}`). Password rules come from `GET /auth/settings`. Rate limits
+and lockouts are enforced by Berth; the app only shows the server's `Retry-After` countdown.
+
 `supabase/` is the previous backend, kept until the old database is retired. No secret keys in
 this repo.

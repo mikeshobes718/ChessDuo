@@ -2,7 +2,9 @@ import SwiftUI
 
 // MARK: - Sign in sheet
 
-/// Optional sign in: Apple first, then Google, then email.
+/// Optional sign in: Apple first, then Google, then email. A session whose email is not verified
+/// yet lands on the verification step instead, and the sheet closes itself once fully signed in,
+/// leaving the user on the screen they opened it from.
 struct SignInSheet: View {
     @EnvironmentObject private var account: AccountStore
     @Environment(\.dismiss) private var dismiss
@@ -11,61 +13,73 @@ struct SignInSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    hero
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(L10n.t("account.sheet.title")).font(.title2.weight(.bold))
-                        Text(L10n.t("account.sheet.subtitle")).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 24)
-
-                    VStack(spacing: 12) {
-                        Button { Task { await finish(account.signInWithApple()) } } label: {
-                            ProviderLabel(title: L10n.t("account.apple")) { Image(systemName: "apple.logo").font(.system(size: 19, weight: .medium)) }
-                        }
-                        .accessibilityIdentifier("account.apple")
-                        if GoogleSignIn.isConfigured {
-                            Button { Task { await finish(account.signInWithGoogle()) } } label: {
-                                ProviderLabel(title: L10n.t("account.google")) { Image("GoogleG").resizable().frame(width: 18, height: 18) }
-                            }
-                            .accessibilityIdentifier("account.google")
-                        }
-                        NavigationLink {
-                            EmailAuthView { signedIn() }
-                        } label: {
-                            ProviderLabel(title: L10n.t("account.email")) { Image(systemName: "envelope.fill").foregroundStyle(Duo.accent) }
-                        }
-                        .accessibilityIdentifier("account.email")
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(account.isBusy)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 24)
-
-                    if account.isBusy { ProgressView().frame(maxWidth: .infinity).padding(.top, 16) }
-                    if let error = account.errorMessage {
-                        Text(error).font(.footnote).foregroundStyle(Duo.danger).padding(.horizontal, 24).padding(.top, 12)
-                    }
-
-                    Text(L10n.t("account.optional"))
-                        .font(.footnote)
-                        .foregroundStyle(Duo.secondaryText(scheme))
-                        .padding(.horizontal, 24)
-                        .padding(.top, 20)
-                    Link(L10n.t("account.privacy"), destination: URL(string: "https://mikeshobes718.github.io/ChessDuo/privacy.html")!)
-                        .font(.footnote.weight(.semibold))
-                        .padding(.horizontal, 24)
-                        .padding(.top, 6)
-                        .padding(.bottom, 24)
-                }
+            if account.needsEmailVerification {
+                VerifyEmailView()
+            } else {
+                providers
             }
-            .ignoresSafeArea(edges: .top)
-            .duoBackground()
-            .toolbar(.hidden, for: .navigationBar)
         }
-        .onAppear { account.errorMessage = nil }
+        .onAppear {
+            // Already signed in: nothing to do here.
+            if account.isSignedIn { dismiss() }
+            account.clearFailure()
+        }
+        .onChange(of: account.isSignedIn) { _, signedIn in if signedIn { signedInDone() } }
+    }
+
+    private var providers: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                hero
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.t("account.sheet.title")).font(.title2.weight(.bold))
+                    Text(L10n.t("account.sheet.subtitle")).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+
+                VStack(spacing: 12) {
+                    Button { Task { await account.signInWithApple() } } label: {
+                        ProviderLabel(title: L10n.t("account.apple")) { Image(systemName: "apple.logo").font(.system(size: 19, weight: .medium)) }
+                    }
+                    .accessibilityIdentifier("account.apple")
+                    if GoogleSignIn.isConfigured {
+                        Button { Task { await account.signInWithGoogle() } } label: {
+                            ProviderLabel(title: L10n.t("account.google")) { Image("GoogleG").resizable().frame(width: 18, height: 18) }
+                        }
+                        .accessibilityIdentifier("account.google")
+                    }
+                    NavigationLink {
+                        EmailAuthView()
+                    } label: {
+                        ProviderLabel(title: L10n.t("account.email")) { Image(systemName: "envelope.fill").foregroundStyle(Duo.accent) }
+                    }
+                    .accessibilityIdentifier("account.email")
+                }
+                .buttonStyle(.plain)
+                .disabled(account.isBusy)
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+
+                if account.isBusy { ProgressView().frame(maxWidth: .infinity).padding(.top, 16) }
+                AuthNotice(failure: account.failure).padding(.horizontal, 24).padding(.top, 12)
+
+                Text(L10n.t("account.optional"))
+                    .font(.footnote)
+                    .foregroundStyle(Duo.secondaryText(scheme))
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                Link(L10n.t("account.privacy"), destination: URL(string: "https://mikeshobes718.github.io/ChessDuo/privacy.html")!)
+                    .font(.footnote.weight(.semibold))
+                    .padding(.horizontal, 24)
+                    .padding(.top, 6)
+                    .padding(.bottom, 24)
+            }
+            .authFormWidth()
+        }
+        .ignoresSafeArea(edges: .top)
+        .duoBackground()
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private var hero: some View {
@@ -82,15 +96,14 @@ struct SignInSheet: View {
                 Image(systemName: "xmark").font(.system(size: 17, weight: .semibold)).foregroundStyle(.primary).frame(width: 44, height: 44)
             }
             .accessibilityIdentifier("account.close")
+            .accessibilityLabel(L10n.t("cancel"))
             .padding(.leading, 12)
             .padding(.top, 56)
         }
         .frame(height: 280)
     }
 
-    private func finish(_ ok: Bool) async { if ok { signedIn() } }
-
-    private func signedIn() {
+    private func signedInDone() {
         onSignedIn()
         dismiss()
     }
@@ -120,248 +133,419 @@ struct ProviderLabel<Icon: View>: View {
 
 // MARK: - Email
 
+/// Password sign in, account creation, passwordless codes and password reset, one step at a time.
+/// Success is picked up by SignInSheet watching `isSignedIn`.
 struct EmailAuthView: View {
     @EnvironmentObject private var account: AccountStore
     @EnvironmentObject private var settings: AppSettings
     @Environment(\.colorScheme) private var scheme
+
+    enum Step: Equatable {
+        case form
+        /// A 6 digit sign in code: passwordless, or the confirmation for a new account (`signUp`).
+        case code(email: String, signUp: Bool)
+        /// A new account that has not confirmed its code yet, moving to a corrected address.
+        case changeEmail(from: String)
+        case resetRequest
+        case resetConfirm(email: String)
+    }
+
+    enum Field: Hashable { case name, email, password, confirm }
+
+    @State private var step: Step = .form
     @State private var creating = false
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
-    @State private var codeSent = false
-    @State private var code = ""
     @State private var passwordConfirm = ""
-    @State private var showPassword = false
-    @State private var resetFlow = false
-    @State private var resendCooldown = 0
+    @State private var code = ""
+    @State private var lastTriedCode = ""
+    @State private var resendAt: Date?
     @State private var localError: String?
-    let onSignedIn: () -> Void
+    /// Server countdowns per step, so a lock on sign in does not also block asking for a reset code.
+    @State private var blocked: [String: Date] = [:]
+    @FocusState private var focus: Field?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text(headerTitle)
-                    .font(.largeTitle.weight(.bold))
-                if codeSent {
-                    Text(L10n.t("account.code.sent", trimmedEmail)).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
-                    CodeBoxes(code: $code)
-                    if resetFlow {
-                        passwordField
-                        field(L10n.t("account.field.passwordConfirm"), text: $passwordConfirm, id: "password.confirm", secure: true)
-                    }
-                    if resendCooldown > 0 {
-                        Text(L10n.t("account.code.wait", "\(resendCooldown)")).font(.caption).foregroundStyle(Duo.secondaryText(scheme))
-                    } else {
-                        Button(L10n.t("account.code.resend")) { Task { await resendCode() } }
-                            .font(.footnote.weight(.semibold))
-                    }
-                } else {
-                    Picker("", selection: $creating) {
-                        Text(L10n.t("account.mode.signIn")).tag(false)
-                        Text(L10n.t("account.mode.create")).tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("email.mode")
-                    if creating {
-                        field(L10n.t("account.field.name"), text: $name, id: "name.field").textContentType(.nickname).textInputAutocapitalization(.words)
-                    }
-                    field(L10n.t("account.field.email"), text: $email, id: "email.field")
-                        .keyboardType(.emailAddress).textContentType(.emailAddress).textInputAutocapitalization(.never).autocorrectionDisabled()
-                    passwordField
-                    if creating {
-                        field(L10n.t("account.field.passwordConfirm"), text: $passwordConfirm, id: "password.confirm", secure: true)
-                        if !password.isEmpty { Text(passwordStrength).font(.caption).foregroundStyle(Duo.secondaryText(scheme)) }
-                    }
-                }
-
-                if let message = localError ?? account.errorMessage {
-                    Text(message).font(.footnote).foregroundStyle(Duo.danger)
-                }
-
-                Button {
-                    Task { await submit() }
-                } label: {
-                    HStack(spacing: 8) {
-                        if account.isBusy { ProgressView().tint(.white) }
-                        Text(codeSent ? L10n.t("account.code.verify") : (creating ? L10n.t("account.mode.create") : L10n.t("account.mode.signIn")))
-                    }
-                }
-                .buttonStyle(DuoPrimaryButtonStyle())
-                .disabled(account.isBusy)
-                .accessibilityIdentifier("email.submit")
-                .padding(.top, 6)
-
-                if !creating && !codeSent {
-                    Button(L10n.t("account.forgot")) { Task { await startReset() } }
-                        .font(.footnote.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .disabled(account.isBusy)
+                Text(headerTitle).font(.largeTitle.weight(.bold)).fixedSize(horizontal: false, vertical: true)
+                switch step {
+                case .form: form
+                case .code(let mail, let signUp): codeStep(mail, signUp: signUp)
+                case .changeEmail: changeEmailStep
+                case .resetRequest: resetRequestStep
+                case .resetConfirm(let mail): resetConfirmStep(mail)
                 }
             }
             .padding(24)
+            .authFormWidth()
         }
+        .scrollDismissesKeyboard(.interactively)
         .duoBackground()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+        .navigationBarBackButtonHidden(step != .form)
+        .toolbar {
+            if step != .form {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { go(.form) } label: { Image(systemName: "chevron.left").font(.body.weight(.semibold)) }
+                        .accessibilityLabel(L10n.t("account.back"))
+                        .accessibilityIdentifier("email.back")
+                }
+            }
+        }
+        .task { await account.loadPolicy() }
         .onAppear {
-            account.errorMessage = nil
+            account.clearFailure()
             if name.isEmpty, settings.playerName != "Player" { name = settings.playerName }
         }
-        .onChange(of: creating) { _, _ in localError = nil; account.errorMessage = nil }
-        .onChange(of: account.pendingFlow) { _, flow in
-            guard let flow else { return }
-            switch flow {
-            case .verifySignUp(let mail):
-                email = mail; resetFlow = false; codeSent = true
-            case .resetPassword(let mail):
-                email = mail; resetFlow = true; codeSent = true
+        .onChange(of: creating) { _, _ in localError = nil; account.failure = nil }
+        .onChange(of: account.failure) { _, failure in
+            if let until = failure?.until { blocked[stepKey] = until }
+        }
+    }
+
+    // MARK: Steps
+
+    private var form: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Picker("", selection: $creating) {
+                Text(L10n.t("account.mode.signIn")).tag(false)
+                Text(L10n.t("account.mode.create")).tag(true)
             }
-            account.clearPendingFlow()
-            startCooldown()
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("email.mode")
+            if creating {
+                AuthTextField(label: L10n.t("account.field.name"), text: $name, id: "name.field")
+                    .textContentType(.nickname).textInputAutocapitalization(.words)
+                    .focused($focus, equals: .name).submitLabel(.next).onSubmit { focus = .email }
+            }
+            emailField.submitLabel(.next).onSubmit { focus = .password }
+            AuthPasswordField(label: L10n.t("account.field.password"), text: $password, isNew: creating, id: "password.field")
+                .focused($focus, equals: .password)
+                .submitLabel(creating ? .next : .go)
+                .onSubmit { if creating { focus = .confirm } else { submitForm() } }
+            if creating {
+                AuthPasswordField(label: L10n.t("account.field.passwordConfirm"), text: $passwordConfirm, isNew: true, id: "password.confirm")
+                    .focused($focus, equals: .confirm).submitLabel(.go).onSubmit(submitForm)
+                PasswordRulesView(policy: account.policy, password: password, confirm: passwordConfirm)
+            }
+            notice
+            AuthSubmitButton(title: creating ? L10n.t("account.mode.create") : L10n.t("account.mode.signIn"),
+                             busy: account.isBusy, blockedUntil: blocked[stepKey], action: submitForm)
+                .padding(.top, 6)
+            if !creating {
+                VStack(spacing: 14) {
+                    Button(L10n.t("account.code.instead")) { Task { await sendSignInCode() } }
+                        .accessibilityIdentifier("email.codeInstead")
+                    Button(L10n.t("account.forgot")) { go(.resetRequest) }
+                        .accessibilityIdentifier("email.forgot")
+                }
+                .font(.footnote.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .disabled(account.isBusy)
+            }
+        }
+    }
+
+    private func codeStep(_ mail: String, signUp: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text(L10n.t("account.code.sent", mail)).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
+            CodeBoxes(code: $code) { _ in submitCode(mail, signUp: signUp) }
+            notice
+            AuthSubmitButton(title: signUp ? L10n.t("account.verify.confirm") : L10n.t("account.code.verify"),
+                             busy: account.isBusy, blockedUntil: blocked[stepKey], enabled: code.count == 6) { submitCode(mail, signUp: signUp) }
+            HStack {
+                ResendButton(availableAt: resendAt, busy: account.isBusy) { Task { await resend { await account.requestCode(email: mail) } } }
+                Spacer()
+                if signUp {
+                    Button(L10n.t("account.verify.wrongEmail")) { email = mail; go(.changeEmail(from: mail)) }
+                        .font(.footnote.weight(.semibold))
+                        .accessibilityIdentifier("code.changeEmail")
+                }
+            }
+            Text(L10n.t("account.code.expires")).font(.caption).foregroundStyle(Duo.secondaryText(scheme))
+        }
+    }
+
+    private var changeEmailStep: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text(L10n.t("account.verify.changeEmail.note")).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
+            emailField.submitLabel(.send).onSubmit(submitChangeEmail)
+            notice
+            AuthSubmitButton(title: L10n.t("account.code.send"), busy: account.isBusy, blockedUntil: blocked[stepKey], action: submitChangeEmail)
+        }
+        .onAppear { focus = .email }
+    }
+
+    private var resetRequestStep: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text(L10n.t("account.reset.request.note")).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
+            emailField.submitLabel(.send).onSubmit(submitResetRequest)
+            notice
+            AuthSubmitButton(title: L10n.t("account.code.send"), busy: account.isBusy, blockedUntil: blocked[stepKey], action: submitResetRequest)
+        }
+        .onAppear { if email.isEmpty { focus = .email } }
+    }
+
+    private func resetConfirmStep(_ mail: String) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            // Same words whether or not the account exists.
+            Text(L10n.t("account.reset.sent", mail)).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
+            CodeBoxes(code: $code) { _ in focus = .password }
+            AuthPasswordField(label: L10n.t("account.field.newPassword"), text: $password, isNew: true, id: "password.field")
+                .focused($focus, equals: .password).submitLabel(.next).onSubmit { focus = .confirm }
+            AuthPasswordField(label: L10n.t("account.field.passwordConfirm"), text: $passwordConfirm, isNew: true, id: "password.confirm")
+                .focused($focus, equals: .confirm).submitLabel(.go).onSubmit { submitReset(mail) }
+            PasswordRulesView(policy: account.policy, password: password, confirm: passwordConfirm)
+            notice
+            AuthSubmitButton(title: L10n.t("account.reset.submit"), busy: account.isBusy, blockedUntil: blocked[stepKey]) { submitReset(mail) }
+            ResendButton(availableAt: resendAt, busy: account.isBusy) { Task { await resend { await account.requestPasswordReset(email: mail) } } }
+            Text(L10n.t("account.reset.othersSignedOut")).font(.caption).foregroundStyle(Duo.secondaryText(scheme))
+        }
+    }
+
+    // MARK: Pieces
+
+    private var emailField: some View {
+        AuthTextField(label: L10n.t("account.field.email"), text: $email, id: "email.field")
+            .keyboardType(.emailAddress).textContentType(.emailAddress)
+            .textInputAutocapitalization(.never).autocorrectionDisabled()
+            .focused($focus, equals: .email)
+    }
+
+    @ViewBuilder private var notice: some View {
+        if let localError {
+            AuthNotice(failure: AuthFailure(message: localError))
+        } else {
+            AuthNotice(failure: account.failure, onReset: step == .form ? { go(.resetRequest) } : nil)
         }
     }
 
     private var headerTitle: String {
-        if codeSent { return resetFlow ? L10n.t("account.reset.title") : L10n.t("account.verify.title") }
-        return creating ? L10n.t("account.mode.create") : L10n.t("account.mode.signIn")
-    }
-
-    private var passwordStrength: String {
-        let hasLetter = password.range(of: "[A-Za-z]", options: .regularExpression) != nil
-        let hasDigit = password.range(of: "\\d", options: .regularExpression) != nil
-        if password.count >= 12 && hasLetter && hasDigit { return L10n.t("account.password.strong") }
-        if password.count >= 8 && hasLetter && hasDigit { return L10n.t("account.password.medium") }
-        return L10n.t("account.password.weak")
-    }
-
-    private var passwordField: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(L10n.t("account.field.password")).font(.subheadline.weight(.semibold))
-            HStack {
-                Group {
-                    if showPassword {
-                        TextField("", text: $password).textContentType(creating ? .newPassword : .password)
-                    } else {
-                        SecureField("", text: $password).textContentType(creating ? .newPassword : .password)
-                    }
-                }
-                Button(showPassword ? L10n.t("account.password.hide") : L10n.t("account.password.show")) { showPassword.toggle() }
-                    .font(.caption.weight(.semibold))
-            }
-            .padding(.horizontal, 14)
-            .frame(height: 50)
-            .background(Duo.card(scheme), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Duo.cardStroke(scheme), lineWidth: 1))
-            .accessibilityIdentifier("password.field")
-            if creating { Text(L10n.t("account.password.hint")).font(.caption).foregroundStyle(Duo.secondaryText(scheme)) }
+        switch step {
+        case .form: return creating ? L10n.t("account.mode.create") : L10n.t("account.mode.signIn")
+        case .code(_, let signUp): return signUp ? L10n.t("account.verify.title") : L10n.t("account.code.title")
+        case .changeEmail: return L10n.t("account.changeEmail")
+        case .resetRequest: return L10n.t("account.reset.request.title")
+        case .resetConfirm: return L10n.t("account.reset.title")
         }
     }
 
-    private func field(_ label: String, text: Binding<String>, id: String, secure: Bool = false, hint: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.subheadline.weight(.semibold))
-            Group {
-                if secure { SecureField("", text: text).textContentType(creating ? .newPassword : .password) } else { TextField("", text: text) }
-            }
-            .padding(.horizontal, 14)
-            .frame(height: 50)
-            .background(Duo.card(scheme), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Duo.cardStroke(scheme), lineWidth: 1))
-            .accessibilityIdentifier(id)
-            if let hint { Text(hint).font(.caption).foregroundStyle(Duo.secondaryText(scheme)) }
+    private var stepKey: String {
+        switch step {
+        case .form: return creating ? "signup" : "login"
+        case .code: return "code"
+        case .changeEmail: return "change"
+        case .resetRequest, .resetConfirm: return "reset"
         }
     }
 
     private var trimmedEmail: String { email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
 
-    private func submit() async {
+    private var emailLooksValid: Bool {
+        let parts = trimmedEmail.split(separator: "@")
+        return parts.count == 2 && parts[1].contains(".") && !trimmedEmail.contains(" ")
+    }
+
+    // MARK: Actions
+
+    private func go(_ next: Step) {
         localError = nil
-        if codeSent {
-            let digits = code.filter(\.isNumber)
-            guard digits.count == 6 else { localError = L10n.t("account.error.code"); return }
-            if resetFlow {
-                guard password.count >= 8, password == passwordConfirm else { localError = L10n.t("account.error.fields"); return }
-                if await account.confirmPasswordReset(email: trimmedEmail, code: digits, password: password) { onSignedIn() }
-            } else if await account.verifyCode(email: trimmedEmail, code: digits) { onSignedIn() }
-            return
-        }
-        guard trimmedEmail.contains("@"), password.count >= 8 else { localError = L10n.t("account.error.fields"); return }
-        if creating, password != passwordConfirm { localError = L10n.t("account.error.fields"); return }
-        let ok: Bool
+        account.failure = nil
+        code = ""
+        lastTriedCode = ""
+        if case .resetConfirm = next {} else if case .code = next {} else { resendAt = nil }
+        withAnimation(.easeInOut(duration: 0.2)) { step = next }
+    }
+
+    private func submitForm() {
+        guard !account.isBusy else { return }
+        localError = nil
+        guard emailLooksValid else { localError = L10n.t("account.error.email"); focus = .email; return }
         if creating {
-            let display = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            ok = await account.signUp(email: trimmedEmail, password: password, name: display.isEmpty ? settings.playerName : display)
+            guard account.policy.accepts(password) else { localError = L10n.t("account.error.password"); focus = .password; return }
+            guard password == passwordConfirm else { localError = L10n.t("account.password.mismatch"); focus = .confirm; return }
         } else {
-            ok = await account.logIn(email: trimmedEmail, password: password)
+            guard !password.isEmpty else { localError = L10n.t("account.error.password.empty"); focus = .password; return }
         }
-        if ok { onSignedIn() }
-    }
-
-    private func startReset() async {
-        localError = nil
-        guard trimmedEmail.contains("@") else { localError = L10n.t("account.error.fields"); return }
-        if await account.requestPasswordReset(email: trimmedEmail) {
-            resetFlow = true
-            codeSent = true
-            startCooldown()
-        }
-    }
-
-    private func resendCode() async {
-        guard resendCooldown == 0 else { return }
-        if resetFlow {
-            _ = await account.requestPasswordReset(email: trimmedEmail)
-        } else {
-            _ = await account.requestCode(email: trimmedEmail)
-        }
-        startCooldown()
-    }
-
-    private func startCooldown() {
-        resendCooldown = 60
+        focus = nil
+        let mail = trimmedEmail
         Task {
-            while resendCooldown > 0 {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                resendCooldown -= 1
+            let outcome: AccountStore.PasswordOutcome
+            if creating {
+                let display = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                outcome = await account.signUp(email: mail, password: password, name: display.isEmpty ? settings.playerName : display)
+            } else {
+                outcome = await account.logIn(email: mail, password: password)
             }
+            if outcome == .needsCode {
+                let failure = account.failure
+                go(.code(email: mail, signUp: true))
+                account.failure = failure
+                resendAt = Date().addingTimeInterval(60)
+            }
+        }
+    }
+
+    private func sendSignInCode() async {
+        localError = nil
+        guard emailLooksValid else { localError = L10n.t("account.error.email"); focus = .email; return }
+        let mail = trimmedEmail
+        if await account.requestCode(email: mail) {
+            go(.code(email: mail, signUp: false))
+            resendAt = Date().addingTimeInterval(60)
+        }
+    }
+
+    private func submitCode(_ mail: String, signUp: Bool) {
+        // Autofill and the button can both fire for the same code; send it once.
+        guard code.count == 6, code != lastTriedCode, !account.isBusy else { return }
+        lastTriedCode = code
+        let display = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task { _ = await account.verifyCode(email: mail, code: code, name: signUp && creating && !display.isEmpty ? display : nil) }
+    }
+
+    private func submitChangeEmail() {
+        guard !account.isBusy, case .changeEmail(let from) = step else { return }
+        localError = nil
+        guard emailLooksValid else { localError = L10n.t("account.error.email"); return }
+        let mail = trimmedEmail
+        guard mail != from else { go(.code(email: from, signUp: true)); return }
+        Task {
+            if await account.moveUnverifiedSignUp(from: from, to: mail) {
+                go(.code(email: mail, signUp: true))
+                resendAt = Date().addingTimeInterval(60)
+            }
+        }
+    }
+
+    private func submitResetRequest() {
+        guard !account.isBusy else { return }
+        localError = nil
+        guard emailLooksValid else { localError = L10n.t("account.error.email"); return }
+        let mail = trimmedEmail
+        Task {
+            if await account.requestPasswordReset(email: mail) {
+                password = ""; passwordConfirm = ""
+                go(.resetConfirm(email: mail))
+                resendAt = Date().addingTimeInterval(60)
+            }
+        }
+    }
+
+    private func submitReset(_ mail: String) {
+        guard !account.isBusy else { return }
+        localError = nil
+        guard code.count == 6 else { localError = L10n.t("account.error.code.length"); return }
+        guard account.policy.accepts(password) else { localError = L10n.t("account.error.password"); focus = .password; return }
+        guard password == passwordConfirm else { localError = L10n.t("account.password.mismatch"); focus = .confirm; return }
+        focus = nil
+        Task { _ = await account.confirmPasswordReset(email: mail, code: code, password: password) }
+    }
+
+    private func resend(_ send: () async -> Bool) async {
+        localError = nil
+        if await send() {
+            code = ""; lastTriedCode = ""
+            resendAt = Date().addingTimeInterval(60)
+        } else if let until = account.failure?.until {
+            resendAt = until
         }
     }
 }
 
-struct CodeBoxes: View {
-    @Binding var code: String
-    @FocusState private var focused: Bool
+// MARK: - Verify email (signed in, not verified yet)
+
+/// The gate for a session whose email is not verified: no backup until the code is confirmed.
+/// The address can still be corrected here, which verifies the new one in the same step.
+struct VerifyEmailView: View {
+    @EnvironmentObject private var account: AccountStore
+    @Environment(\.colorScheme) private var scheme
+    @State private var code = ""
+    @State private var lastTriedCode = ""
+    @State private var resendAt: Date?
+    @State private var changing = false
+    @State private var newEmail = ""
+    @State private var newEmailSent: String?
 
     var body: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<6, id: \.self) { index in
-                let digit = digit(at: index)
-                Text(digit)
-                    .font(.title2.monospacedDigit().weight(.semibold))
-                    .frame(width: 44, height: 52)
-                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.06)))
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
-            }
-        }
-        .overlay {
-            TextField("", text: $code)
-                .keyboardType(.numberPad)
-                .textContentType(.oneTimeCode)
-                .focused($focused)
-                .opacity(0.01)
-                .onChange(of: code) { _, value in
-                    let digits = String(value.filter(\.isNumber).prefix(6))
-                    if digits != value { code = digits }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text(changing ? L10n.t("account.changeEmail") : L10n.t("account.verify.title")).font(.largeTitle.weight(.bold))
+                if changing && newEmailSent == nil {
+                    Text(L10n.t("account.verify.changeEmail.note")).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
+                    AuthTextField(label: L10n.t("account.field.email"), text: $newEmail, id: "email.field")
+                        .keyboardType(.emailAddress).textContentType(.emailAddress)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .submitLabel(.send).onSubmit(sendNewEmail)
+                    AuthNotice(failure: account.failure)
+                    AuthSubmitButton(title: L10n.t("account.code.send"), busy: account.isBusy, blockedUntil: account.failure?.until, action: sendNewEmail)
+                } else {
+                    Text(L10n.t("account.verify.note", newEmailSent ?? account.email ?? "")).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
+                    CodeBoxes(code: $code) { _ in confirm() }
+                    AuthNotice(failure: account.failure)
+                    AuthSubmitButton(title: L10n.t("account.verify.confirm"), busy: account.isBusy, blockedUntil: account.failure?.until,
+                                     enabled: code.count == 6, action: confirm)
+                    HStack {
+                        ResendButton(availableAt: resendAt, busy: account.isBusy) { Task { await resend() } }
+                        Spacer()
+                        Button(L10n.t("account.verify.wrongEmail")) { account.failure = nil; changing = true; newEmailSent = nil }
+                            .font(.footnote.weight(.semibold))
+                            .accessibilityIdentifier("verify.changeEmail")
+                    }
                 }
+                Button(L10n.t("account.signOut")) { Task { await account.signOut() } }
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Duo.secondaryText(scheme))
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 12)
+                    .accessibilityIdentifier("verify.signOut")
+            }
+            .padding(24)
+            .authFormWidth()
         }
-        .onAppear { focused = true }
-        .accessibilityIdentifier("code.field")
+        .duoBackground()
+        .navigationBarTitleDisplayMode(.inline)
+        // Confirmed on another device while this screen was closed.
+        .task { await account.refreshUser() }
     }
 
-    private func digit(at index: Int) -> String {
-        let digits = Array(code.filter(\.isNumber))
-        guard index < digits.count else { return " " }
-        return String(digits[index])
+    private func confirm() {
+        guard code.count == 6, code != lastTriedCode, !account.isBusy else { return }
+        lastTriedCode = code
+        let entered = code
+        Task {
+            if let target = newEmailSent {
+                _ = await account.confirmEmailChange(newEmail: target, code: entered)
+            } else {
+                _ = await account.confirmEmailVerification(code: entered)
+            }
+        }
+    }
+
+    private func resend() async {
+        let ok = if let target = newEmailSent { await account.requestEmailChange(newEmail: target) } else { await account.sendEmailVerification() }
+        if ok {
+            code = ""; lastTriedCode = ""
+            resendAt = Date().addingTimeInterval(60)
+        } else if let until = account.failure?.until {
+            resendAt = until
+        }
+    }
+
+    private func sendNewEmail() {
+        let mail = newEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard mail.contains("@"), !account.isBusy else { return }
+        Task {
+            if await account.requestEmailChange(newEmail: mail) {
+                newEmailSent = mail
+                changing = false
+                code = ""; lastTriedCode = ""
+                resendAt = Date().addingTimeInterval(60)
+            }
+        }
     }
 }
 
@@ -378,9 +562,6 @@ struct AccountView: View {
     @State private var confirmSignOut = false
     @State private var confirmSignOutEverywhere = false
     @State private var showChangeEmail = false
-    @State private var newEmail = ""
-    @State private var emailCode = ""
-    @State private var emailCodeSent = false
 
     var body: some View {
         ScrollView {
@@ -389,8 +570,12 @@ struct AccountView: View {
                     AccountAvatar(name: settings.playerName, size: 52)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(settings.displayName).font(.headline)
-                        if let email = account.email { Text(email).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme)).lineLimit(1) }
-                        if let provider = account.provider { Text(provider.title).font(.caption).foregroundStyle(Duo.secondaryText(scheme)) }
+                        Text(account.email ?? account.provider?.title ?? "")
+                            .font(.subheadline).foregroundStyle(Duo.secondaryText(scheme)).lineLimit(1)
+                            .accessibilityIdentifier("account.emailLabel")
+                        if account.email != nil, let provider = account.provider {
+                            Text(provider.title).font(.caption).foregroundStyle(Duo.secondaryText(scheme))
+                        }
                     }
                     Spacer()
                 }
@@ -412,9 +597,12 @@ struct AccountView: View {
                             if cloud.isSyncing {
                                 ProgressView()
                             } else {
-                                Text(cloud.lastSynced.map(Self.syncLabel) ?? L10n.t("account.never"))
-                                    .foregroundStyle(Duo.secondaryText(scheme))
-                                    .accessibilityIdentifier("account.lastSynced")
+                                // Re-rendered each minute so "Just now" ages into "2 minutes ago".
+                                TimelineView(.periodic(from: .now, by: 30)) { context in
+                                    Text(cloud.lastSynced.map { RelativeTime.label(for: $0, now: context.date) } ?? L10n.t("account.never"))
+                                        .foregroundStyle(Duo.secondaryText(scheme))
+                                        .accessibilityIdentifier("account.lastSynced")
+                                }
                             }
                         }
                         .padding(.horizontal, 16).frame(minHeight: 50)
@@ -430,12 +618,39 @@ struct AccountView: View {
                         .padding(.top, 4)
                 }
 
-                VStack(spacing: 18) {
-                    if account.provider == .email {
-                        Button(L10n.t("account.changeEmail")) { showChangeEmail = true }
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Duo.accentDeep)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.t("account.security")).font(.subheadline.weight(.semibold)).foregroundStyle(Duo.secondaryText(scheme)).padding(.leading, 4)
+                    VStack(spacing: 0) {
+                        NavigationLink { SessionsView() } label: {
+                            HStack(spacing: 14) {
+                                Image(systemName: "iphone.gen3").foregroundStyle(Duo.accent).frame(width: 22)
+                                Text(L10n.t("account.sessions")).foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 16).frame(minHeight: 50)
+                            .contentShape(Rectangle())
+                        }
+                        .accessibilityIdentifier("account.sessions")
+                        if account.provider == .email {
+                            Divider().padding(.leading, 48)
+                            Button { showChangeEmail = true } label: {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "envelope").foregroundStyle(Duo.accent).frame(width: 22)
+                                    Text(L10n.t("account.changeEmail")).foregroundStyle(.primary)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16).frame(minHeight: 50)
+                                .contentShape(Rectangle())
+                            }
+                            .accessibilityIdentifier("account.changeEmail")
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .duoCard(padding: 0)
+                }
+
+                VStack(spacing: 18) {
                     Button(L10n.t("account.signOut")) { confirmSignOut = true }
                         .font(.headline)
                         .foregroundStyle(Duo.accentDeep)
@@ -449,12 +664,14 @@ struct AccountView: View {
                         .foregroundStyle(Duo.danger.opacity(0.85))
                         .accessibilityIdentifier("account.delete")
                     if account.isBusy { ProgressView() }
-                    if let error = account.errorMessage { Text(error).font(.footnote).foregroundStyle(Duo.danger) }
+                    AuthNotice(failure: account.failure)
                 }
+                .disabled(account.isBusy)
                 .frame(maxWidth: .infinity)
-                .padding(.top, 28)
+                .padding(.top, 20)
             }
             .padding(16)
+            .authFormWidth()
         }
         .duoBackground()
         .navigationTitle(L10n.t("account.title"))
@@ -467,56 +684,15 @@ struct AccountView: View {
             Button(L10n.t("account.signOutEverywhere"), role: .destructive) { Task { await account.signOut(everywhere: true); dismiss() } }
             Button(L10n.t("cancel"), role: .cancel) {}
         } message: { Text(L10n.t("account.signOutEverywhere.note")) }
-        .sheet(isPresented: $showChangeEmail) {
-            NavigationStack {
-                Form {
-                    Section {
-                        TextField(L10n.t("account.field.email"), text: $newEmail)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        if emailCodeSent {
-                            TextField(L10n.t("account.code.field"), text: $emailCode)
-                                .keyboardType(.numberPad)
-                                .textContentType(.oneTimeCode)
-                        }
-                    }
-                    if let error = account.errorMessage {
-                        Text(error).font(.footnote).foregroundStyle(Duo.danger)
-                    }
-                }
-                .navigationTitle(L10n.t("account.changeEmail"))
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button(L10n.t("cancel")) { showChangeEmail = false } }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(emailCodeSent ? L10n.t("account.code.verify") : L10n.t("account.code.send")) {
-                            Task {
-                                let trimmed = newEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                                guard trimmed.contains("@") else { return }
-                                if emailCodeSent {
-                                    let digits = emailCode.filter(\.isNumber)
-                                    guard digits.count == 6 else { return }
-                                    if await account.confirmEmailChange(newEmail: trimmed, code: digits) { showChangeEmail = false }
-                                } else if await account.requestEmailChange(newEmail: trimmed) {
-                                    emailCodeSent = true
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        .sheet(isPresented: $showChangeEmail) { ChangeEmailSheet() }
         .alert(L10n.t("account.delete.confirm"), isPresented: $confirmDelete) {
             Button(L10n.t("cancel"), role: .cancel) {}
             Button(L10n.t("account.delete"), role: .destructive) { Task { if await account.deleteAccount() { dismiss() } } }
         } message: { Text(L10n.t("account.delete.message")) }
-        .onAppear { account.errorMessage = nil }
-    }
-
-    /// Avoids relative labels like "Active in 0 seconds" right after a sync.
-    private static func syncLabel(for date: Date) -> String {
-        if date.timeIntervalSinceNow > -90 { return L10n.t("account.lastSynced.justNow") }
-        return date.formatted(.relative(presentation: .named))
+        .onAppear { account.clearFailure() }
+        // Keeps the email label current if it changed on another device.
+        .task { await account.refreshUser() }
+        .onChange(of: account.hasSession) { _, has in if !has { dismiss() } }
     }
 
     private func row(_ title: String, icon: String, trailing: String?) -> some View {
@@ -528,6 +704,74 @@ struct AccountView: View {
             Image(systemName: "checkmark").font(.footnote.weight(.bold)).foregroundStyle(Duo.mint)
         }
         .padding(.horizontal, 16).frame(minHeight: 50)
+    }
+}
+
+/// Change a verified account's email: a code goes to the new address, confirming it switches over.
+struct ChangeEmailSheet: View {
+    @EnvironmentObject private var account: AccountStore
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
+    @State private var newEmail = ""
+    @State private var sentTo: String?
+    @State private var code = ""
+    @State private var lastTriedCode = ""
+    @State private var resendAt: Date?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if let sentTo {
+                        Text(L10n.t("account.code.sent", sentTo)).font(.subheadline).foregroundStyle(Duo.secondaryText(scheme))
+                        CodeBoxes(code: $code) { _ in confirm() }
+                        AuthNotice(failure: account.failure)
+                        AuthSubmitButton(title: L10n.t("account.verify.confirm"), busy: account.isBusy, blockedUntil: account.failure?.until,
+                                         enabled: code.count == 6, action: confirm)
+                        ResendButton(availableAt: resendAt, busy: account.isBusy) { send(sentTo) }
+                    } else {
+                        AuthTextField(label: L10n.t("account.field.newEmail"), text: $newEmail, id: "email.field")
+                            .keyboardType(.emailAddress).textContentType(.emailAddress)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .submitLabel(.send).onSubmit { send(trimmed) }
+                        AuthNotice(failure: account.failure)
+                        AuthSubmitButton(title: L10n.t("account.code.send"), busy: account.isBusy, blockedUntil: account.failure?.until,
+                                         enabled: trimmed.contains("@")) { send(trimmed) }
+                    }
+                }
+                .padding(24)
+                .authFormWidth()
+            }
+            .duoBackground()
+            .navigationTitle(L10n.t("account.changeEmail"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button(L10n.t("cancel")) { dismiss() } }
+            }
+        }
+        .onAppear { account.clearFailure() }
+    }
+
+    private var trimmed: String { newEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+
+    private func send(_ mail: String) {
+        guard mail.contains("@"), !account.isBusy else { return }
+        Task {
+            if await account.requestEmailChange(newEmail: mail) {
+                sentTo = mail
+                code = ""; lastTriedCode = ""
+                resendAt = Date().addingTimeInterval(60)
+            } else if let until = account.failure?.until {
+                resendAt = until
+            }
+        }
+    }
+
+    private func confirm() {
+        guard let sentTo, code.count == 6, code != lastTriedCode, !account.isBusy else { return }
+        lastTriedCode = code
+        let entered = code
+        Task { if await account.confirmEmailChange(newEmail: sentTo, code: entered) { dismiss() } }
     }
 }
 

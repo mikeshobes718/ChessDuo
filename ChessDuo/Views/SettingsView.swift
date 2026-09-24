@@ -33,6 +33,18 @@ struct SettingsView: View {
                         }
                     }
                     .accessibilityIdentifier("settings.account")
+                } else if account.needsEmailVerification {
+                    // Signed in but not verified: no backup until the email is confirmed.
+                    Button { showSignIn = true } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "envelope.badge").font(.title2).foregroundStyle(Duo.accent).frame(width: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L10n.t("account.verify.title")).font(.headline).foregroundStyle(.primary)
+                                Text(account.email ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("account.verify")
                 } else {
                     Button { showSignIn = true } label: {
                         HStack(spacing: 12) {

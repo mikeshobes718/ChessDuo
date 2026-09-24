@@ -329,6 +329,45 @@ final class ChessDuoUITests: XCTestCase {
         app.buttons["account.close"].firstMatch.tap()
     }
 
+    func testEmailAuthFlows() {
+        app.terminate()
+        app.launchEnvironment["CHESSDUO_SIGNED_OUT"] = "1"
+        app.launchEnvironment["CHESSDUO_SCREEN"] = "settings"
+        app.launch()
+        tapButton("Sign in")
+        XCTAssertTrue(app.buttons["account.email"].waitForExistence(timeout: 5))
+        app.buttons["account.email"].tap()
+
+        // Create account: the rule checklist tracks the password, and a weak one is stopped locally.
+        app.segmentedControls["email.mode"].buttons["Create account"].tap()
+        let email = app.textFields["email.field"]
+        XCTAssertTrue(email.waitForExistence(timeout: 5))
+        email.tap(); email.typeText("nobody-\(Int.random(in: 100000...999999))@example.com")
+        let password = app.secureTextFields["password.field"]
+        password.tap(); password.typeText("abc")
+        XCTAssertTrue(app.otherElements["password.rules"].exists || app.staticTexts["At least 8 characters"].exists)
+        app.buttons["email.submit"].tap()
+        XCTAssertTrue(app.otherElements["auth.error"].waitForExistence(timeout: 3))
+
+        // Sign in with a wrong password: the server's answer, shown as invalid credentials.
+        app.segmentedControls["email.mode"].buttons["Sign in"].tap()
+        password.tap(); password.typeText("defg1234")
+        app.buttons["email.submit"].tap()
+        let notice = app.otherElements["auth.error"]
+        XCTAssertTrue(notice.waitForExistence(timeout: 20))
+        XCTAssertTrue(notice.label.contains("email or password is wrong") || app.otherElements["auth.rateLimited"].exists)
+
+        // Forgot password: same reply whether or not the account exists, then the code step with a resend countdown.
+        app.buttons["email.forgot"].tap()
+        XCTAssertTrue(app.staticTexts["Reset your password"].waitForExistence(timeout: 3))
+        app.buttons["email.submit"].tap()
+        XCTAssertTrue(app.staticTexts["Choose a new password"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.textFields["code.field"].exists)
+        XCTAssertTrue(app.buttons["code.resend"].label.hasPrefix("Resend in"))
+        app.buttons["email.back"].tap()
+        XCTAssertTrue(app.segmentedControls["email.mode"].waitForExistence(timeout: 3))
+    }
+
     func testOnlineLobbyCreateAndLeave() {
         app.terminate()
         app.launchEnvironment["CHESSDUO_SCREEN"] = "lobby"

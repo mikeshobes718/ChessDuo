@@ -29,7 +29,9 @@
 		72B23E1A588D2B5C2C4FC451 /* ChessDuoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7641A9D02A5D65DB7A6ECA4 /* ChessDuoApp.swift */; };
 		79190EF9FE5363BE622C8D86 /* Position.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F696857F8E543581D90F158 /* Position.swift */; };
 		8C7FD2976EC6382ECFDBC4F2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 64E9BB657B181A4200972E59 /* Assets.xcassets */; };
+		8EAB9C97CD67241C4FA83DE1 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD35C4DF5044B4DDFB377E34 /* SessionsView.swift */; };
 		94580C667382686EE308A162 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0308FBEC3818551531DF32E1 /* RootView.swift */; };
+		97C3CAE74A9C1C3654FAD25C /* AuthComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B22F3555982FD47EDBD20F25 /* AuthComponents.swift */; };
 		9AE1EA3D9AA49C56D5777543 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F6C11BDB4C2B244FDCAC43B /* Feedback.swift */; };
 		A458CFA8F010A7EDD942FDD6 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 897C56CC14F8D86AF9DEFFE6 /* AccountStore.swift */; };
 		A6E0681A8ABD4A58803BB353 /* PuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E4342C864A12282F8D00EE /* PuzzleView.swift */; };
@@ -105,9 +107,11 @@
 		A722191529BC845822DE0B13 /* ChessDuo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChessDuo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7641A9D02A5D65DB7A6ECA4 /* ChessDuoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessDuoApp.swift; sourceTree = "<group>"; };
 		B0974D9CA1E9865674B6BE99 /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
+		B22F3555982FD47EDBD20F25 /* AuthComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthComponents.swift; sourceTree = "<group>"; };
 		B39B9DAC72AEA85B2DBA176D /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		B4AFA33787CD935E6FA05409 /* OpeningBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningBook.swift; sourceTree = "<group>"; };
 		BBC9BCF5A1B10BAD03AEEC6F /* ChessDuo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChessDuo.entitlements; sourceTree = "<group>"; };
+		BD35C4DF5044B4DDFB377E34 /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		C1B587794F66DB8010410139 /* LearnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearnView.swift; sourceTree = "<group>"; };
 		C3381A699725FE8969045170 /* PieceShapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieceShapes.swift; sourceTree = "<group>"; };
 		C71824FCB99AB7106A502BCB /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
@@ -130,6 +134,7 @@
 			children = (
 				DB4D0B5F16FDB6F77D5E978F /* AccountView.swift */,
 				276170613957880A06EAF002 /* AnalysisView.swift */,
+				B22F3555982FD47EDBD20F25 /* AuthComponents.swift */,
 				B39B9DAC72AEA85B2DBA176D /* HistoryView.swift */,
 				552A61F6561FF35274291BCF /* HomeView.swift */,
 				C1B587794F66DB8010410139 /* LearnView.swift */,
@@ -137,6 +142,7 @@
 				F23AD302371307956B2E5CD1 /* OnlineViews.swift */,
 				37E4342C864A12282F8D00EE /* PuzzleView.swift */,
 				0308FBEC3818551531DF32E1 /* RootView.swift */,
+				BD35C4DF5044B4DDFB377E34 /* SessionsView.swift */,
 				CBCC0DB3965BCE5FE4D332D8 /* SettingsView.swift */,
 			);
 			path = Views;
@@ -389,6 +395,7 @@
 				EBAB8E1886EFE34DEB5F9676 /* AnalysisView.swift in Sources */,
 				4AF26100C7C86BA833A7DD57 /* AppSettings.swift in Sources */,
 				050F3ED4EF8A4C79FC0490DC /* AppleSignIn.swift in Sources */,
+				97C3CAE74A9C1C3654FAD25C /* AuthComponents.swift in Sources */,
 				0584F0B20B89C7169F7DCF9E /* BerthAuthAPI.swift in Sources */,
 				F7684C02113DC8D4E1BBF059 /* Board3DView.swift in Sources */,
 				45A1195F2B05E5E444F8CB04 /* BoardView2D.swift in Sources */,
@@ -425,6 +432,7 @@
 				94580C667382686EE308A162 /* RootView.swift in Sources */,
 				C8C551F94F7038C3023615A2 /* SAN.swift in Sources */,
 				C56C76E8FD8BD3B29330F2DF /* Search.swift in Sources */,
+				8EAB9C97CD67241C4FA83DE1 /* SessionsView.swift in Sources */,
 				58DB41DD05E14632E9510749 /* SettingsView.swift in Sources */,
 				E140284B0F22FEFD8F5A7BC5 /* Theme.swift in Sources */,
 				316FDD7A5B3793EC28E0CB49 /* TimeControl.swift in Sources */,
