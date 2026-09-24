@@ -819,6 +819,8 @@ struct BackupCard: View {
                 .accessibilityIdentifier("home.backup.dismiss")
         }
         .duoCard(padding: 14)
+        // Contain, so the card's id does not replace the ids of its Sign in and close buttons.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.backupCard")
     }
 }

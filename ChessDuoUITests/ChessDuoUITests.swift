@@ -348,17 +348,17 @@ final class ChessDuoUITests: XCTestCase {
         email.tap(); email.typeText("nobody-\(Int.random(in: 100000...999999))@example.com")
         let password = app.secureTextFields["password.field"]
         password.tap(); password.typeText("abc")
-        XCTAssertTrue(app.otherElements["password.rules"].exists || app.staticTexts["At least 8 characters"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["password.rules"].firstMatch.exists || app.staticTexts["At least 8 characters"].exists)
         app.buttons["email.submit"].tap()
-        XCTAssertTrue(app.otherElements["auth.error"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["auth.error"].firstMatch.waitForExistence(timeout: 3))
 
         // Sign in with a wrong password: the server's answer, shown as invalid credentials.
         app.segmentedControls["email.mode"].buttons["Sign in"].tap()
         password.tap(); password.typeText("defg1234")
         app.buttons["email.submit"].tap()
-        let notice = app.otherElements["auth.error"]
+        let notice = app.descendants(matching: .any)["auth.error"].firstMatch
         XCTAssertTrue(notice.waitForExistence(timeout: 20))
-        XCTAssertTrue(notice.label.contains("email or password is wrong") || app.otherElements["auth.rateLimited"].exists)
+        XCTAssertTrue(notice.label.contains("email or password is wrong") || app.descendants(matching: .any)["auth.rateLimited"].firstMatch.exists)
 
         // Forgot password: same reply whether or not the account exists, then the code step with a resend countdown.
         app.buttons["email.forgot"].tap()
