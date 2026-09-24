@@ -311,6 +311,24 @@ final class ChessDuoUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
     }
 
+    func testSignedOutAccountSmoke() {
+        app.terminate()
+        app.launchEnvironment["CHESSDUO_SIGNED_OUT"] = "1"
+        app.launchEnvironment["CHESSDUO_SCREEN"] = "home"
+        app.launch()
+        XCTAssertTrue(app.otherElements["home.backupCard"].waitForExistence(timeout: 8))
+        tapButton("Sign in")
+        XCTAssertTrue(app.buttons["account.apple"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["account.email"].waitForExistence(timeout: 3))
+        app.buttons["account.close"].firstMatch.tap()
+        app.terminate()
+        app.launchEnvironment["CHESSDUO_SCREEN"] = "settings"
+        app.launch()
+        tapButton("Sign in")
+        XCTAssertTrue(app.buttons["account.email"].waitForExistence(timeout: 5))
+        app.buttons["account.close"].firstMatch.tap()
+    }
+
     func testOnlineLobbyCreateAndLeave() {
         app.terminate()
         app.launchEnvironment["CHESSDUO_SCREEN"] = "lobby"

@@ -412,7 +412,7 @@ struct AccountView: View {
                             if cloud.isSyncing {
                                 ProgressView()
                             } else {
-                                Text(cloud.lastSynced.map { $0.formatted(.relative(presentation: .named)) } ?? L10n.t("account.never"))
+                                Text(cloud.lastSynced.map(Self.syncLabel) ?? L10n.t("account.never"))
                                     .foregroundStyle(Duo.secondaryText(scheme))
                                     .accessibilityIdentifier("account.lastSynced")
                             }
@@ -511,6 +511,12 @@ struct AccountView: View {
             Button(L10n.t("account.delete"), role: .destructive) { Task { if await account.deleteAccount() { dismiss() } } }
         } message: { Text(L10n.t("account.delete.message")) }
         .onAppear { account.errorMessage = nil }
+    }
+
+    /// Avoids relative labels like "Active in 0 seconds" right after a sync.
+    private static func syncLabel(for date: Date) -> String {
+        if date.timeIntervalSinceNow > -90 { return L10n.t("account.lastSynced.justNow") }
+        return date.formatted(.relative(presentation: .named))
     }
 
     private func row(_ title: String, icon: String, trailing: String?) -> some View {
