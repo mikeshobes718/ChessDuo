@@ -22,9 +22,12 @@ targets:
         API_GAME_URL: "https://api.atberth.com/v1/apps/chessduo/functions/game"
         # Berth publishable key: safe to ship, it can only call the game function.
         API_PUBLISHABLE_KEY: "bpk_0iJVm1fvX7TyC8x7RKs6huaDEAJSI5vK-DuIoESR9Jk"
+        # Optional accounts: end-user auth and owner-only tables of the same app.
+        ACCOUNT_API_URL: "https://api.atberth.com/v1/apps/chessduo"
+        GOOGLE_IOS_CLIENT_ID: "GOOGLE_CLIENT_ID_PENDING"
         CFBundleDisplayName: "Chess Duo"
-        CFBundleShortVersionString: "2.0"
-        CFBundleVersion: "40"
+        CFBundleShortVersionString: "2.1"
+        CFBundleVersion: "41"
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
           UIColorName: LaunchBackground
@@ -51,8 +54,8 @@ targets:
         PRODUCT_NAME: ChessDuo
         DEVELOPMENT_TEAM: N7LRRN2YGY
         CODE_SIGN_STYLE: Automatic
-        MARKETING_VERSION: "2.0"
-        CURRENT_PROJECT_VERSION: 40
+        MARKETING_VERSION: "2.1"
+        CURRENT_PROJECT_VERSION: 41
         CODE_SIGN_ENTITLEMENTS: ChessDuo/ChessDuo.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_STRICT_CONCURRENCY: minimal

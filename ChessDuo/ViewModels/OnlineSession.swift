@@ -114,6 +114,13 @@ final class OnlineSession: ObservableObject {
     }
 
     static func save(_ info: OnlineSessionInfo?) {
+        let before = UserDefaults.standard.data(forKey: sessionKey)
+        store(info)
+        if UserDefaults.standard.data(forKey: sessionKey) != before { CloudSync.shared.activeRoomChanged() }
+    }
+
+    /// Writes the saved room without marking it as a local change (used when restoring from the backup).
+    static func store(_ info: OnlineSessionInfo?) {
         if let info, let data = try? JSONEncoder().encode(info) {
             UserDefaults.standard.set(data, forKey: sessionKey)
         } else {

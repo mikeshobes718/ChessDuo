@@ -7,11 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		050F3ED4EF8A4C79FC0490DC /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E74D9DE7A631BFCCD1A2F17 /* AppleSignIn.swift */; };
+		0584F0B20B89C7169F7DCF9E /* BerthAuthAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70E759E36B9DC98A8034FD22 /* BerthAuthAPI.swift */; };
 		13E86C14FA7993B771BAAD89 /* PuzzleSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00817527E1C35ABF3FCA10E1 /* PuzzleSession.swift */; };
 		1CB5F91B907C54C0AC8F6424 /* GameRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E043FF80B262DB99E17702A /* GameRecord.swift */; };
 		316FDD7A5B3793EC28E0CB49 /* TimeControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D77C0B306F71BF29B59A369 /* TimeControl.swift */; };
+		350E7122854A526D7EA4DEFE /* GoogleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BBE48216535C21E3A9C2181 /* GoogleSignIn.swift */; };
 		3538E1028D594BBE8853FFBD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 52B641D8170292BD1E51D658 /* PrivacyInfo.xcprivacy */; };
 		3977FFBD641952638F2EED1D /* GameWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D957573456D99C5B33610C4 /* GameWidgets.swift */; };
+		3CAF011273EA741347D684B5 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB4D0B5F16FDB6F77D5E978F /* AccountView.swift */; };
 		3D633B2D691E8733A841D8DC /* Coach.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD83C93B90AE492D148D3D2A /* Coach.swift */; };
 		40987F285A1BA45C323B069F /* LearnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B587794F66DB8010410139 /* LearnView.swift */; };
 		45A1195F2B05E5E444F8CB04 /* BoardView2D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D393BE8A217A0FC3927A80D /* BoardView2D.swift */; };
@@ -27,6 +31,7 @@
 		8C7FD2976EC6382ECFDBC4F2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 64E9BB657B181A4200972E59 /* Assets.xcassets */; };
 		94580C667382686EE308A162 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0308FBEC3818551531DF32E1 /* RootView.swift */; };
 		9AE1EA3D9AA49C56D5777543 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F6C11BDB4C2B244FDCAC43B /* Feedback.swift */; };
+		A458CFA8F010A7EDD942FDD6 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 897C56CC14F8D86AF9DEFFE6 /* AccountStore.swift */; };
 		A6E0681A8ABD4A58803BB353 /* PuzzleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E4342C864A12282F8D00EE /* PuzzleView.swift */; };
 		ADA76B5F3601C08DAAE691C0 /* ChessDuoUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081EC03B72A70CD9D01B1337 /* ChessDuoUITests.swift */; };
 		AEC50B60F56032382F874D05 /* Evaluation.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9701D27E291A66B230312CC /* Evaluation.swift */; };
@@ -35,6 +40,8 @@
 		C56C76E8FD8BD3B29330F2DF /* Search.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7D0FB6EB1DD6DECBE287B08 /* Search.swift */; };
 		C8C551F94F7038C3023615A2 /* SAN.swift in Sources */ = {isa = PBXBuildFile; fileRef = F65EFFEADCA9E057390B1A75 /* SAN.swift */; };
 		CF5D1411ECFF97E5B1899044 /* OnlineModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26F36FB5CE816552639767CF /* OnlineModels.swift */; };
+		D18C7CBA2EA6F8A6DA60A83C /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B1AD2061EEE438E3577E4FF /* Keychain.swift */; };
+		D1DA479FF8949D3D1FBABF19 /* CloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0974D9CA1E9865674B6BE99 /* CloudSync.swift */; };
 		D29412A82DBDC72BE8904729 /* GameOverSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 305F0C34D0B5CE7FABE6FA87 /* GameOverSheet.swift */; };
 		E140284B0F22FEFD8F5A7BC5 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9006417009FC20EB772868 /* Theme.swift */; };
 		E2BC898901188F10C71F2A66 /* ChessGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 772C208891F178B138616ED5 /* ChessGame.swift */; };
@@ -77,21 +84,27 @@
 		4A995C2EB817C78CFA279BFB /* LocalGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalGameView.swift; sourceTree = "<group>"; };
 		52B641D8170292BD1E51D658 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		552A61F6561FF35274291BCF /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		5B1AD2061EEE438E3577E4FF /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		5BBE48216535C21E3A9C2181 /* GoogleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignIn.swift; sourceTree = "<group>"; };
 		5D77C0B306F71BF29B59A369 /* TimeControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeControl.swift; sourceTree = "<group>"; };
+		5E74D9DE7A631BFCCD1A2F17 /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		5EE98478FEB62DC0914B86D6 /* OnlineAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineAPI.swift; sourceTree = "<group>"; };
 		64E9BB657B181A4200972E59 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6E043FF80B262DB99E17702A /* GameRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRecord.swift; sourceTree = "<group>"; };
 		6E1F6844D5B2479688C7E9C9 /* OnlineSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnlineSession.swift; sourceTree = "<group>"; };
 		6F4D793193F03055B7042920 /* Board3DView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Board3DView.swift; sourceTree = "<group>"; };
+		70E759E36B9DC98A8034FD22 /* BerthAuthAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BerthAuthAPI.swift; sourceTree = "<group>"; };
 		772C208891F178B138616ED5 /* ChessGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessGame.swift; sourceTree = "<group>"; };
 		7D393BE8A217A0FC3927A80D /* BoardView2D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardView2D.swift; sourceTree = "<group>"; };
 		89795A8FD8C8B2F860EB16E3 /* Puzzles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Puzzles.swift; sourceTree = "<group>"; };
+		897C56CC14F8D86AF9DEFFE6 /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
 		8D7AB467E553F9D48181CDF8 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		8E65F222D0589F90A9D7468D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8F75372D8994C8DB523D77C7 /* AnalysisSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisSession.swift; sourceTree = "<group>"; };
 		9D957573456D99C5B33610C4 /* GameWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameWidgets.swift; sourceTree = "<group>"; };
 		A722191529BC845822DE0B13 /* ChessDuo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChessDuo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7641A9D02A5D65DB7A6ECA4 /* ChessDuoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessDuoApp.swift; sourceTree = "<group>"; };
+		B0974D9CA1E9865674B6BE99 /* CloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSync.swift; sourceTree = "<group>"; };
 		B39B9DAC72AEA85B2DBA176D /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		B4AFA33787CD935E6FA05409 /* OpeningBook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningBook.swift; sourceTree = "<group>"; };
 		BBC9BCF5A1B10BAD03AEEC6F /* ChessDuo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChessDuo.entitlements; sourceTree = "<group>"; };
@@ -101,6 +114,7 @@
 		CBCC0DB3965BCE5FE4D332D8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CF862C9B7228C8473E383EA1 /* Zobrist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Zobrist.swift; sourceTree = "<group>"; };
 		D55E25F29AB7326DF6976AEE /* GameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
+		DB4D0B5F16FDB6F77D5E978F /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		DF588680E54A28F5D995F32E /* ChessTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChessTypes.swift; sourceTree = "<group>"; };
 		E9701D27E291A66B230312CC /* Evaluation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Evaluation.swift; sourceTree = "<group>"; };
 		EB45FD1C47BE8D0287875ED4 /* ChessDuoUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ChessDuoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -114,6 +128,7 @@
 		10978E02B53DD611BBA12567 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				DB4D0B5F16FDB6F77D5E978F /* AccountView.swift */,
 				276170613957880A06EAF002 /* AnalysisView.swift */,
 				B39B9DAC72AEA85B2DBA176D /* HistoryView.swift */,
 				552A61F6561FF35274291BCF /* HomeView.swift */,
@@ -177,6 +192,19 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
+		6452B8A719940136EBF3047D /* Account */ = {
+			isa = PBXGroup;
+			children = (
+				897C56CC14F8D86AF9DEFFE6 /* AccountStore.swift */,
+				5E74D9DE7A631BFCCD1A2F17 /* AppleSignIn.swift */,
+				70E759E36B9DC98A8034FD22 /* BerthAuthAPI.swift */,
+				B0974D9CA1E9865674B6BE99 /* CloudSync.swift */,
+				5BBE48216535C21E3A9C2181 /* GoogleSignIn.swift */,
+				5B1AD2061EEE438E3577E4FF /* Keychain.swift */,
+			);
+			path = Account;
+			sourceTree = "<group>";
+		};
 		9A64B6848D77E187297149DF /* ChessDuoUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -219,6 +247,7 @@
 				BBC9BCF5A1B10BAD03AEEC6F /* ChessDuo.entitlements */,
 				8E65F222D0589F90A9D7468D /* Info.plist */,
 				52B641D8170292BD1E51D658 /* PrivacyInfo.xcprivacy */,
+				6452B8A719940136EBF3047D /* Account */,
 				F204A66023980DFBC2CB187D /* App */,
 				CCAE4B8931537350AAF42DFC /* Components */,
 				BA0B4181684487128683D18D /* Engine */,
@@ -354,14 +383,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A458CFA8F010A7EDD942FDD6 /* AccountStore.swift in Sources */,
+				3CAF011273EA741347D684B5 /* AccountView.swift in Sources */,
 				F1F8CB8F69C31CB6807261A4 /* AnalysisSession.swift in Sources */,
 				EBAB8E1886EFE34DEB5F9676 /* AnalysisView.swift in Sources */,
 				4AF26100C7C86BA833A7DD57 /* AppSettings.swift in Sources */,
+				050F3ED4EF8A4C79FC0490DC /* AppleSignIn.swift in Sources */,
+				0584F0B20B89C7169F7DCF9E /* BerthAuthAPI.swift in Sources */,
 				F7684C02113DC8D4E1BBF059 /* Board3DView.swift in Sources */,
 				45A1195F2B05E5E444F8CB04 /* BoardView2D.swift in Sources */,
 				72B23E1A588D2B5C2C4FC451 /* ChessDuoApp.swift in Sources */,
 				E2BC898901188F10C71F2A66 /* ChessGame.swift in Sources */,
 				4899A04DB62018694A876FFB /* ChessTypes.swift in Sources */,
+				D1DA479FF8949D3D1FBABF19 /* CloudSync.swift in Sources */,
 				3D633B2D691E8733A841D8DC /* Coach.swift in Sources */,
 				AEC50B60F56032382F874D05 /* Evaluation.swift in Sources */,
 				9AE1EA3D9AA49C56D5777543 /* Feedback.swift in Sources */,
@@ -369,9 +403,11 @@
 				1CB5F91B907C54C0AC8F6424 /* GameRecord.swift in Sources */,
 				B40BA02559A97CD081C28943 /* GameSession.swift in Sources */,
 				3977FFBD641952638F2EED1D /* GameWidgets.swift in Sources */,
+				350E7122854A526D7EA4DEFE /* GoogleSignIn.swift in Sources */,
 				F4AB5CF95B682C6FB6CC3CB9 /* HistoryStore.swift in Sources */,
 				F24DC3A2E967867232EBD0BF /* HistoryView.swift in Sources */,
 				F5A37F0B34A8A89F8D66D789 /* HomeView.swift in Sources */,
+				D18C7CBA2EA6F8A6DA60A83C /* Keychain.swift in Sources */,
 				F88F42E0EF1168B1F1E90318 /* L10n.swift in Sources */,
 				40987F285A1BA45C323B069F /* LearnView.swift in Sources */,
 				5DEED85FD74833DF347AC1B2 /* LocalGameView.swift in Sources */,
@@ -414,7 +450,7 @@
 				CODE_SIGN_ENTITLEMENTS = ChessDuo/ChessDuo.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 40;
+				CURRENT_PROJECT_VERSION = 41;
 				DEVELOPMENT_TEAM = N7LRRN2YGY;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = ChessDuo/Info.plist;
@@ -422,7 +458,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikeshobes.chesscoachduo;
 				PRODUCT_NAME = ChessDuo;
 				SDKROOT = iphoneos;
@@ -503,7 +539,7 @@
 				CODE_SIGN_ENTITLEMENTS = ChessDuo/ChessDuo.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 40;
+				CURRENT_PROJECT_VERSION = 41;
 				DEVELOPMENT_TEAM = N7LRRN2YGY;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = ChessDuo/Info.plist;
@@ -511,7 +547,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mikeshobes.chesscoachduo;
 				PRODUCT_NAME = ChessDuo;
 				SDKROOT = iphoneos;

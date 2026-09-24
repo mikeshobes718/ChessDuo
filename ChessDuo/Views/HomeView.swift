@@ -3,7 +3,10 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var history: HistoryStore
+    @EnvironmentObject private var account: AccountStore
     @Environment(\.colorScheme) private var scheme
+    @AppStorage("home.backupCardDismissed") private var backupCardDismissed = false
+    @State private var showSignIn = false
     let onStartLocal: (GameSession) -> Void
     let onOpenOnline: (String?) -> Void
 
@@ -70,11 +73,15 @@ struct HomeView: View {
                     }
                     .duoCard(padding: 14)
                 }.buttonStyle(.plain)
+                if !account.isSignedIn && !backupCardDismissed {
+                    BackupCard(onSignIn: { showSignIn = true }, onDismiss: { withAnimation { backupCardDismissed = true } })
+                }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
         .duoBackground()
+        .sheet(isPresented: $showSignIn) { SignInSheet().environmentObject(account).environmentObject(settings) }
         .navigationTitle(L10n.t("app.name"))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

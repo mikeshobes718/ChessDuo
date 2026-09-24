@@ -77,6 +77,59 @@ final class AppSettings: ObservableObject {
         localAutoFlip = bool("local.autoFlip", false)
     }
 
+    /// When the synced settings last changed on this device. Not itself part of the blob.
+    var syncedSettingsUpdatedAt: Date? {
+        get { defaults.object(forKey: "sync.settingsUpdatedAt") as? Date }
+        set { defaults.set(newValue, forKey: "sync.settingsUpdatedAt") }
+    }
+
+    var synced: SyncedSettings {
+        SyncedSettings(
+            playerName: playerName, language: language.rawValue, appearance: appearance.rawValue,
+            boardTheme: boardTheme.rawValue, pieceStyle: pieceStyle.rawValue, customLightHex: customLightHex, customDarkHex: customDarkHex,
+            prefers3D: prefers3D, cameraPreset: cameraPreset.rawValue, showCoordinates: showCoordinates, showLegalMoves: showLegalMoves,
+            highlightLastMove: highlightLastMove, highlightThreats: highlightThreats, confirmMoves: confirmMoves, autoQueen: autoQueen,
+            animations: animations, hintsEnabled: hintsEnabled, moveGuide: moveGuide, coachCard: coachCard, playForMe: playForMe,
+            assistLevel: assistLevel.rawValue, sounds: sounds, haptics: haptics, clockWarning: clockWarning,
+            turnNotifications: turnNotifications, computerLevel: computerLevel.rawValue, localAutoFlip: localAutoFlip
+        )
+    }
+
+    /// Applies a synced blob. Unknown or missing values keep the current setting; unchanged values are
+    /// not reassigned so the language re-render only happens when the language really changes.
+    func apply(_ s: SyncedSettings) {
+        func set<T: Equatable>(_ path: ReferenceWritableKeyPath<AppSettings, T>, _ value: T?) {
+            if let value, self[keyPath: path] != value { self[keyPath: path] = value }
+        }
+        set(\.playerName, s.playerName.flatMap { $0.isEmpty ? nil : $0 })
+        set(\.appearance, s.appearance.flatMap(AppearanceMode.init))
+        set(\.boardTheme, s.boardTheme.flatMap(BoardTheme.init))
+        set(\.pieceStyle, s.pieceStyle.flatMap(PieceStyle.init))
+        set(\.customLightHex, s.customLightHex)
+        set(\.customDarkHex, s.customDarkHex)
+        set(\.prefers3D, s.prefers3D)
+        set(\.cameraPreset, s.cameraPreset.flatMap(CameraPreset.init))
+        set(\.showCoordinates, s.showCoordinates)
+        set(\.showLegalMoves, s.showLegalMoves)
+        set(\.highlightLastMove, s.highlightLastMove)
+        set(\.highlightThreats, s.highlightThreats)
+        set(\.confirmMoves, s.confirmMoves)
+        set(\.autoQueen, s.autoQueen)
+        set(\.animations, s.animations)
+        set(\.hintsEnabled, s.hintsEnabled)
+        set(\.moveGuide, s.moveGuide)
+        set(\.coachCard, s.coachCard)
+        set(\.playForMe, s.playForMe)
+        set(\.assistLevel, s.assistLevel.flatMap(EngineLevel.init))
+        set(\.sounds, s.sounds)
+        set(\.haptics, s.haptics)
+        set(\.clockWarning, s.clockWarning)
+        set(\.turnNotifications, s.turnNotifications)
+        set(\.computerLevel, s.computerLevel.flatMap(EngineLevel.init))
+        set(\.localAutoFlip, s.localAutoFlip)
+        set(\.language, s.language.flatMap(AppLanguage.init))
+    }
+
     var lightSquare: Color { boardTheme == .custom ? (Color(hex: customLightHex) ?? BoardTheme.classic.light) : boardTheme.light }
     var darkSquare: Color { boardTheme == .custom ? (Color(hex: customDarkHex) ?? BoardTheme.classic.dark) : boardTheme.dark }
 
@@ -104,4 +157,36 @@ final class AppSettings: ObservableObject {
             }
         }
     }
+}
+
+/// The preferences that follow an account to a new phone. Raw values and optionals so a blob written
+/// by a newer or older version still decodes. Onboarding state and push tokens stay on the device.
+struct SyncedSettings: Codable, Equatable {
+    var playerName: String?
+    var language: String?
+    var appearance: String?
+    var boardTheme: String?
+    var pieceStyle: String?
+    var customLightHex: String?
+    var customDarkHex: String?
+    var prefers3D: Bool?
+    var cameraPreset: String?
+    var showCoordinates: Bool?
+    var showLegalMoves: Bool?
+    var highlightLastMove: Bool?
+    var highlightThreats: Bool?
+    var confirmMoves: Bool?
+    var autoQueen: Bool?
+    var animations: Bool?
+    var hintsEnabled: Bool?
+    var moveGuide: Bool?
+    var coachCard: Bool?
+    var playForMe: Bool?
+    var assistLevel: Int?
+    var sounds: Bool?
+    var haptics: Bool?
+    var clockWarning: Bool?
+    var turnNotifications: Bool?
+    var computerLevel: Int?
+    var localAutoFlip: Bool?
 }

@@ -8,6 +8,8 @@ final class HistoryStore: ObservableObject {
 
     @Published private(set) var records: [GameRecord] = []
     @Published private(set) var stats = PlayerStats()
+    /// Deleted game IDs and when, so a delete reaches the backup instead of being restored by it.
+    private(set) var tombstones: [UUID: Date] = [:]
 
     private let folder: URL
     private var saveTask: Task<Void, Never>?
@@ -21,6 +23,7 @@ final class HistoryStore: ObservableObject {
 
     private var recordsURL: URL { folder.appendingPathComponent("games.json") }
     private var statsURL: URL { folder.appendingPathComponent("stats.json") }
+    private var tombstonesURL: URL { folder.appendingPathComponent("tombstones.json") }
 
     private func load() {
         let decoder = JSONDecoder()
@@ -31,13 +34,17 @@ final class HistoryStore: ObservableObject {
         if let data = try? Data(contentsOf: statsURL), let decoded = try? decoder.decode(PlayerStats.self, from: data) {
             stats = decoded
         }
+        if let data = try? Data(contentsOf: tombstonesURL), let decoded = try? decoder.decode([UUID: Date].self, from: data) {
+            tombstones = decoded
+        }
     }
 
-    private func scheduleSave() {
+    private func scheduleSave(sync: Bool = true) {
         saveTask?.cancel()
         let snapshotRecords = records
         let snapshotStats = stats
-        let recordsURL = recordsURL, statsURL = statsURL
+        let snapshotTombstones = tombstones
+        let recordsURL = recordsURL, statsURL = statsURL, tombstonesURL = tombstonesURL
         saveTask = Task.detached(priority: .utility) {
             try? await Task.sleep(nanoseconds: 250_000_000)
             guard !Task.isCancelled else { return }
@@ -45,12 +52,18 @@ final class HistoryStore: ObservableObject {
             encoder.dateEncodingStrategy = .iso8601
             if let data = try? encoder.encode(snapshotRecords) { try? data.write(to: recordsURL, options: .atomic) }
             if let data = try? encoder.encode(snapshotStats) { try? data.write(to: statsURL, options: .atomic) }
+            if let data = try? encoder.encode(snapshotTombstones) { try? data.write(to: tombstonesURL, options: .atomic) }
         }
+        if sync { CloudSync.shared.localChange() }
     }
 
     // MARK: - Records
 
     func upsert(_ record: GameRecord) {
+        var record = record
+        record.updatedAt = Date()
+        record.deletedAt = nil
+        tombstones[record.id] = nil
         if let idx = records.firstIndex(where: { $0.id == record.id }) {
             records[idx] = record
         } else {
@@ -62,10 +75,13 @@ final class HistoryStore: ObservableObject {
 
     func delete(_ record: GameRecord) {
         records.removeAll { $0.id == record.id }
+        tombstones[record.id] = Date()
         scheduleSave()
     }
 
     func deleteAll() {
+        let now = Date()
+        for r in records { tombstones[r.id] = now }
         records.removeAll()
         scheduleSave()
     }
@@ -86,6 +102,7 @@ final class HistoryStore: ObservableObject {
     /// Records the outcome from the perspective of the human `me` (nil for pass & play: counted as a game only).
     func recordOutcome(_ result: GameResult, me: PieceColor?, mode: GameMode, level: EngineLevel? = nil) {
         stats.games += 1
+        stats.updatedAt = Date()
         guard let me else { scheduleSave(); return }
         if result.winner == me {
             stats.wins += 1
@@ -117,11 +134,23 @@ final class HistoryStore: ObservableObject {
             stats.puzzleStreak = 0
             stats.puzzleRating = max(400, stats.puzzleRating - 10)
         }
+        stats.updatedAt = Date()
         scheduleSave()
     }
 
     func resetStats() {
         stats = PlayerStats()
+        stats.updatedAt = Date()
         scheduleSave()
+    }
+
+    // MARK: - Sync
+
+    /// Replaces local state with the result of a merge. Does not stamp new timestamps.
+    func applySynced(records merged: [GameRecord], tombstones mergedTombstones: [UUID: Date], stats mergedStats: PlayerStats?) {
+        records = merged.sorted { $0.startedAt > $1.startedAt }
+        tombstones = mergedTombstones
+        if let mergedStats { stats = mergedStats }
+        scheduleSave(sync: false)
     }
 }

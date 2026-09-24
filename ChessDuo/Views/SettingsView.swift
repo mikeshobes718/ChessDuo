@@ -4,7 +4,9 @@ import UserNotifications
 struct SettingsView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var history: HistoryStore
+    @EnvironmentObject private var account: AccountStore
     @Environment(\.colorScheme) private var scheme
+    @State private var showSignIn = false
     @State private var showResetStats = false
     @State private var showClearHistory = false
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
@@ -19,6 +21,32 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section(L10n.t("account.section")) {
+                if account.isSignedIn {
+                    NavigationLink { AccountView() } label: {
+                        HStack(spacing: 12) {
+                            AccountAvatar(name: settings.playerName, size: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(settings.displayName).font(.headline)
+                                Text(account.email ?? account.provider?.title ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("settings.account")
+                } else {
+                    Button { showSignIn = true } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "person.crop.circle.badge.plus").font(.title2).foregroundStyle(Duo.accent).frame(width: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L10n.t("account.signIn")).font(.headline).foregroundStyle(.primary)
+                                Text(L10n.t("account.signIn.sub")).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("account.signIn")
+                }
+            }
+
             Section(L10n.t("settings.profile")) {
                 TextField(L10n.t("settings.name"), text: $settings.playerName).textInputAutocapitalization(.words)
                 Picker(L10n.t("settings.language"), selection: $settings.language) { ForEach(AppLanguage.allCases) { Text($0.title).tag($0) } }
@@ -115,6 +143,7 @@ struct SettingsView: View {
         .duoBackground()
         .navigationTitle(L10n.t("settings.title"))
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showSignIn) { SignInSheet().environmentObject(account).environmentObject(settings) }
         .alert(L10n.t("settings.resetStats.confirm"), isPresented: $showResetStats) {
             Button(L10n.t("cancel"), role: .cancel) {}
             Button(L10n.t("settings.reset"), role: .destructive) { history.resetStats() }

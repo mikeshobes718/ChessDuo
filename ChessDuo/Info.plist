@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>ACCOUNT_API_URL</key>
+	<string>https://api.atberth.com/v1/apps/chessduo</string>
 	<key>API_GAME_URL</key>
 	<string>https://api.atberth.com/v1/apps/chessduo/functions/game</string>
 	<key>API_PUBLISHABLE_KEY</key>
@@ -27,7 +29,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.0</string>
+	<string>2.1</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -40,7 +42,9 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>40</string>
+	<string>41</string>
+	<key>GOOGLE_IOS_CLIENT_ID</key>
+	<string>GOOGLE_CLIENT_ID_PENDING</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

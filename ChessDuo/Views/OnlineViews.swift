@@ -102,6 +102,7 @@ struct OnlineLobbyView: View {
         list.insert(code, at: 0)
         recentCodes = Array(list.prefix(5))
         UserDefaults.standard.set(recentCodes, forKey: "online.recentCodes")
+        CloudSync.shared.localChange()
     }
 
     private func create() async {

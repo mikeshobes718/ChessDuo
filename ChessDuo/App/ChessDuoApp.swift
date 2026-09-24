@@ -8,6 +8,13 @@ struct ChessDuoApp: App {
     @StateObject private var settings = AppSettings.shared
     @StateObject private var history = HistoryStore.shared
     @StateObject private var router = AppRouter.shared
+    @StateObject private var account = AccountStore.shared
+    @StateObject private var cloud = CloudSync.shared
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        CloudSync.shared.start()
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -15,10 +22,19 @@ struct ChessDuoApp: App {
                 .environmentObject(settings)
                 .environmentObject(history)
                 .environmentObject(router)
+                .environmentObject(account)
+                .environmentObject(cloud)
                 .preferredColorScheme(settings.appearance.colorScheme)
                 .tint(Duo.accent)
                 .id(settings.languageTick)
                 .onOpenURL { url in router.handle(url: url) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active: cloud.syncSoon(delay: 0)
+            case .background: cloud.flushInBackground()
+            default: break
+            }
         }
     }
 }

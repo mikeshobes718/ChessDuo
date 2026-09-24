@@ -141,7 +141,9 @@ enum HomeRoute: Hashable {
 
 struct OnboardingView: View {
     @EnvironmentObject private var settings: AppSettings
+    @EnvironmentObject private var account: AccountStore
     @State private var name = ""
+    @State private var showSignIn = false
     let onDone: () -> Void
     var body: some View {
         VStack(spacing: 24) {
@@ -164,10 +166,27 @@ struct OnboardingView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal)
             Spacer()
-            Button(L10n.t("onboarding.go"), action: finish).buttonStyle(DuoPrimaryButtonStyle()).padding(.horizontal, 24).padding(.bottom, 24)
+            VStack(spacing: 14) {
+                Button(L10n.t("onboarding.go"), action: finish).buttonStyle(DuoPrimaryButtonStyle())
+                Button(L10n.t("onboarding.signIn")) { showSignIn = true }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Duo.accentDeep)
+                    .accessibilityIdentifier("onboarding.signIn")
+            }
+            .padding(.horizontal, 24).padding(.bottom, 24)
         }
         .duoBackground()
         .onAppear { name = settings.playerName }
+        .sheet(isPresented: $showSignIn) {
+            SignInSheet(onSignedIn: {
+                let typed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                if settings.playerName.trimmingCharacters(in: .whitespaces).isEmpty { settings.playerName = typed.isEmpty ? "Player" : typed }
+                settings.hasOnboarded = true
+                onDone()
+            })
+            .environmentObject(account)
+            .environmentObject(settings)
+        }
     }
     private func finish() {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -32,8 +32,12 @@ struct GameRecord: Codable, Identifiable, Hashable {
     var whiteClock: TimeInterval?
     var blackClock: TimeInterval?
     var review: ReviewSummary?
+    /// Optional so files written before accounts existed still decode.
+    var updatedAt: Date?
+    var deletedAt: Date?
 
     var isFinished: Bool { result != nil }
+    var lastChange: Date { updatedAt ?? endedAt ?? startedAt }
     var moveCount: Int { (moves.count + 1) / 2 }
 
     var pgn: String {
@@ -129,6 +133,7 @@ struct PlayerStats: Codable, Hashable {
     var puzzleRating = 800
     var computerWinsByLevel: [Int: Int] = [:]
     var solvedPuzzleIDs: Set<String> = []
+    var updatedAt: Date?
 
     var winRate: Int { games == 0 ? 0 : Int((Double(wins) / Double(games) * 100).rounded()) }
 }
