@@ -316,15 +316,18 @@ final class ChessDuoUITests: XCTestCase {
         app.launchEnvironment["CHESSDUO_SIGNED_OUT"] = "1"
         app.launchEnvironment["CHESSDUO_SCREEN"] = "home"
         app.launch()
-        XCTAssertTrue(app.otherElements["home.backupCard"].waitForExistence(timeout: 8))
-        tapButton("Sign in")
+        // The backup card sits under Past Games, below the fold on a phone.
+        let cardSignIn = app.buttons["home.backup.signIn"].firstMatch
+        for _ in 0..<6 where !(cardSignIn.exists && cardSignIn.isHittable) { app.swipeUp() }
+        XCTAssertTrue(cardSignIn.waitForExistence(timeout: 8))
+        cardSignIn.tap()
         XCTAssertTrue(app.buttons["account.apple"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["account.email"].waitForExistence(timeout: 3))
         app.buttons["account.close"].firstMatch.tap()
         app.terminate()
         app.launchEnvironment["CHESSDUO_SCREEN"] = "settings"
         app.launch()
-        tapButton("Sign in")
+        tapButton("account.signIn")
         XCTAssertTrue(app.buttons["account.email"].waitForExistence(timeout: 5))
         app.buttons["account.close"].firstMatch.tap()
     }
@@ -334,7 +337,7 @@ final class ChessDuoUITests: XCTestCase {
         app.launchEnvironment["CHESSDUO_SIGNED_OUT"] = "1"
         app.launchEnvironment["CHESSDUO_SCREEN"] = "settings"
         app.launch()
-        tapButton("Sign in")
+        tapButton("account.signIn")
         XCTAssertTrue(app.buttons["account.email"].waitForExistence(timeout: 5))
         app.buttons["account.email"].tap()
 
