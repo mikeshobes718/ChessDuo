@@ -31,7 +31,9 @@ struct ChessDuoApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active: cloud.syncSoon(delay: 0)
+            case .active:
+                cloud.syncSoon(delay: 0)
+                PushManager.shared.clearBadge()
             case .background: cloud.flushInBackground()
             default: break
             }
@@ -110,6 +112,13 @@ final class PushManager: ObservableObject {
                 if let token = self.token { self.send(token: token) }
             }
         }
+    }
+
+    /// Pushes set badge 1 and the app has no inbox, so opening the app means they've been seen.
+    func clearBadge() {
+        let center = UNUserNotificationCenter.current()
+        center.setBadgeCount(0)
+        center.removeAllDeliveredNotifications()
     }
 
     func didReceive(token: String) {
