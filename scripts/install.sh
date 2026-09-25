@@ -24,8 +24,14 @@ rm -rf ./*\ [0-9].xcodeproj 2>/dev/null || true
 echo "== generating project"
 xcodegen generate >/dev/null
 
+# Sign with the App Store Connect API key when it's set, so no Xcode account login is needed.
+AUTH=()
+if [[ -n "${APPLE_API_KEY:-}" && -n "${APPLE_API_KEY_ID:-}" && -n "${APPLE_API_ISSUER:-}" ]]; then
+  AUTH=(-authenticationKeyPath "$APPLE_API_KEY" -authenticationKeyID "$APPLE_API_KEY_ID" -authenticationKeyIssuerID "$APPLE_API_ISSUER")
+fi
+
 echo "== building Release for device"
-xcodebuild -project ChessDuo.xcodeproj -scheme ChessDuo \
+xcodebuild -project ChessDuo.xcodeproj -scheme ChessDuo "${AUTH[@]}" \
   -destination "generic/platform=iOS" \
   -derivedDataPath "$DD" \
   -configuration Release \
